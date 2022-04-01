@@ -94,12 +94,12 @@ always @(posedge frame_int or negedge reset) begin
         dir_x <= 1;
         dir_y <= 1;
     end else begin
-        if (offset_x < 0) dir_x <= 1;
+        if (offset_x < 0) dir_x <= 3;
         else if (offset_x >= 800-64) dir_x <= -1;
         
         offset_x <= offset_x+dir_x;
 
-        if (offset_y < 0) dir_y <= 1;
+        if (offset_y < 0) dir_y <= 2;
         else if (offset_y > 480-64) dir_y <= -1;
          
         offset_y <= offset_y+dir_y;
