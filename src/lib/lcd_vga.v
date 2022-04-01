@@ -19,7 +19,7 @@ module LcdVga
     localparam H_BackPorch = 46;
     localparam H_Pluse = 1; 
     localparam H_Data = 800;
-    localparam H_FrontPorch= 294; //was 210, use 294 to make 60Hz frame rate
+    localparam H_FrontPorch= 294; //was 210, use 294 to make 60Hz frame rate @clk 36Mhz
 
     localparam V_BackPorch = 23;
     localparam V_Pluse = 5; 
@@ -50,31 +50,17 @@ module LcdVga
     assign LCD_HSYNC = scan_x > H_Pluse;
     assign LCD_VSYNC = scan_y > V_Pluse;
     assign LCD_DEN = x_en && y_en;
-    assign LCD_CLK = ~clk_pix;
+    assign LCD_CLK = ~clk_pix; //clk_pix is inverted to avoid setup time issue
 
     reg [4:0] r;
     reg [5:0] g;
     reg [4:0] b;
-    
-//    wire [7:0] wr;
-//    wire [7:0] wg;
-//    wire [7:0] wb;
-
-//    Gowin_pROM hsv_rom(
-//        .clk(clk_pix), 
-//        .reset(reset),
-//        .ce(1'b1),
-//        .oce(1'b1),
-//        .ad(x+y+offset),
-//        .dout(dout)
-//    );
-//    assign {wr,wg,wb} = dout[31:8];
 
     wire [7:0] hue = y;
     wire [15:0] hue_out;
-    Gowin_ROM16 hue2rbg(.ad(hue),.dout(hue_out));
+    Gowin_ROM16 hue2rbg(.ad(hue),.dout(hue_out)); // hsv2rgb is just not fast enough.
 
-    wire is_bmp = ($signed(x) >= offset_x) && ($signed(y) >= offset_y) && ($signed(x) < offset_x+64) && ($signed(y) < offset_y+64);
+    wire is_bmp = (x >= offset_x) && (y >= offset_y) && (x < offset_x+64) && (y < offset_y+64);
 
     wire [15:0] bmp_out;
     wire [5:0] oy = is_bmp?y-offset_y:0;
@@ -107,7 +93,7 @@ module LcdVga
             end else begin
                 frame_int <=0;
                 scan_x <= scan_x + 1;
-                if ( x == 0 || y == 0 || x == H_Data-1 || y == V_Data-1 ) begin
+                if ( x == 0 || y == 0 || x == H_Data-1 || y == V_Data-1 ) begin // draw a border line at the edge of the screen, to test if any pixel is out of the screen
                     {r,g,b} = 16'hffff;
                 end else begin
                     {r,g,b} = is_bmp ? bmp_out : hue_out ;
