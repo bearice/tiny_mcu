@@ -1,0 +1,15 @@
+[General]
+ipc_version=4
+file=pixels_argb
+module=ARGB_Rom
+target_device=gw1nz1-015
+type=ram_prom
+version=1.0
+
+[Config]
+DEPTH=4096
+LANG=0
+MEM_FILE=../../argb.mi
+READ=0
+RESET_MODE=true
+WIDTH=16

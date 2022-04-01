@@ -62,17 +62,21 @@ module LcdVga
 
     wire is_bmp = (x >= offset_x) && (y >= offset_y) && (x < offset_x+64) && (y < offset_y+64);
 
-    wire [15:0] bmp_out;
+//    wire [15:0] bmp_out;
+    wire bmp_alpha;
+    wire [4:0] bmp_r;
+    wire [4:0] bmp_g;
+    wire [4:0] bmp_b;
     wire [5:0] oy = is_bmp?y-offset_y:0;
     wire [5:0] ox = is_bmp?x-offset_x:0;
     wire [11:0] bmp_addr = {oy,ox};
-    PixelsROM pixels(
+    ARGB_Rom pixels(
         .clk(clk_pix), 
         .reset(~reset),
         .ce(1'b1),
         .oce(1'b1),
         .ad(bmp_addr),
-        .dout(bmp_out)
+        .dout({bmp_alpha,bmp_r,bmp_g,bmp_b})
     );
 
     always @( posedge clk_pix or negedge reset )begin
@@ -96,7 +100,7 @@ module LcdVga
                 if ( x == 0 || y == 0 || x == H_Data-1 || y == V_Data-1 ) begin // draw a border line at the edge of the screen, to test if any pixel is out of the screen
                     {r,g,b} = 16'hffff;
                 end else begin
-                    {r,g,b} = is_bmp ? bmp_out : hue_out ;
+                    {r,g,b} = is_bmp & bmp_alpha ? {bmp_r,bmp_g,1'b0,bmp_b} : hue_out ;
                 end
             end
         end

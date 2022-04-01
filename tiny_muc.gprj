@@ -6,6 +6,7 @@
     <Device name="GW1NZ-1" pn="GW1NZ-LV1QN48C6/I5">gw1nz1-015</Device>
     <FileList>
         <File path="src/gowin_prom/pixels.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_prom/pixels_argb.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_rom16/gowin_rom16.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_rpll/gowin_rpll.v" type="file.verilog" enable="1"/>
         <File path="src/lib/hsv2rgb.v" type="file.verilog" enable="1"/>
