@@ -55,8 +55,23 @@ module LcdVga
     reg [4:0] r;
     reg [5:0] g;
     reg [4:0] b;
+    wire [3:0] pattern = offset_x[8:5] ^ offset_y[8:5];
+    reg [7:0] hue;
+    
+    always @* begin
+        case (pattern)
+            0: hue <= x;
+            1: hue <= y;
+            2: hue <= x+y;
+            3: hue <= x-y;
+            4: hue <= x|y;
+            5: hue <= x&y;
+            6: hue <= x^y;
+            7: hue <= x*y;
+            default: hue <= pattern <<5;
+        endcase
+    end
 
-    wire [7:0] hue = y;
     wire [15:0] hue_out;
     Gowin_ROM16 hue2rbg(.ad(hue),.dout(hue_out)); // hsv2rgb is just not fast enough.
 
