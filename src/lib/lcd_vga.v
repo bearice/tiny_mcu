@@ -37,51 +37,50 @@ module LcdVga
     localparam CharPerLine = H_Data / FontWidth;
     localparam LinePerPage = V_Data / FontHeight;
 
-    reg signed [15:0] scan_x;
-    reg signed [15:0] scan_y;
+    reg signed [15:0] p0_x;
+    reg signed [15:0] p0_y;
 
-    wire x_en = scan_x >= H_BackPorch && scan_x < H_Max-H_FrontPorch;
-    wire y_en = scan_y >= V_BackPorch && scan_y < V_Max-V_FrontPorch;
+    wire x_en = p0_x >= H_BackPorch && p0_x < H_Max-H_FrontPorch;
+    wire y_en = p0_y >= V_BackPorch && p0_y < V_Max-V_FrontPorch;
 
-    assign LCD_HSYNC = scan_x > H_Pluse;
-    assign LCD_VSYNC = scan_y > V_Pluse;
-    assign LCD_DEN = x_en && y_en;
-    assign LCD_CLK = clk_pix; //clk_pix is inverted to avoid setup time issue
+    assign LCD_HSYNC = p0_x > H_Pluse;
+    assign LCD_VSYNC = p0_y > V_Pluse;
+    assign LCD_DEN = x_en & y_en;
+    assign LCD_CLK = ~clk_pix; //clk_pix is inverted to avoid setup time issue
 
-    // reg [15:0] next_pixel;
+    // phase 0: clock generation
     always @( posedge clk_pix or negedge reset ) begin
         if( !reset ) begin
-            scan_y <= 0;
-            scan_x <= 0;
+            p0_y <= 0;
+            p0_x <= 0;
             frame_int <=0;
+            p1_x <= 0;
+            p1_y <= 0;
         end else begin 
-            // LCD_DATA <= 0;
-            if( scan_y == V_Max ) begin
-                scan_y <= 0;
-                scan_x <= 0;
-                frame_int <=1;
-            end else if( scan_x == H_Max ) begin
-                scan_x <= 0;
-                scan_y <= scan_y + 1;
+            if( p0_y == V_Max ) begin
+                p0_y <= 0;
+                p0_x <= 0;
+            end else if( p0_x == H_Max ) begin
+                p0_x <= 0;
+                p0_y <= p0_y + 1;
             end else begin
-                frame_int <=0;
-                scan_x <= scan_x + 1;
+                p0_x <= p0_x + 1;
             end
-            p1_x <= scan_x-H_BackPorch-4;
-            p1_y <= scan_y-V_BackPorch;
+            frame_int <= p0_y == V_Data + V_BackPorch;
+            p1_x <= p0_x-H_BackPorch + 5; // we have 5 stage pipeline for each pixel, so add 5.
+            p1_y <= p0_y-V_BackPorch;
         end
     end
 
     // phase1: map pixel to text address
     reg signed [15:0] p1_x;
     reg signed [15:0] p1_y;
-    wire p1_en = p1_x>=0 && p1_y>=0 && p1_x<H_Data && p1_y<V_Data;
-    always @( posedge clk_pix) begin
-        if (p1_en) begin
+    always @(posedge clk_pix) begin
+        if (p1_x>=0 && p1_y>=0 && p1_x<H_Data && p1_y<V_Data) begin
             p2_en <= 1;
             p2_x <= p1_x;
             p2_y <= p1_y;
-            p2_addr <= (p1_x / FontWidth) + (p1_y / FontHeight) * CharPerLine;
+            p2_addr <= (p1_x / FontWidth) + ((p1_y / FontHeight) * CharPerLine);
         end else 
             p2_en <= 0;
     end
@@ -90,12 +89,12 @@ module LcdVga
     reg p2_en;
     reg signed [15:0] p2_x;
     reg signed [15:0] p2_y;
-    reg [15:0] p2_addr; //Address of the text ram
+    reg [11:0] p2_addr; //Address of the text ram
     wire [15:0] p2_data; //Data from the text ram
     TextRam ram(
         //read on port b
-        .clkb(clk_pix),
-        .resetb(~reset),
+        .clkb(~clk_pix), // ram & rom need half clock to read from memory, so invert the clock.
+        .resetb(~reset), // reset is high active, input is low active, so invert the reset.
         .adb(p2_addr),
         .dout(p2_data),
         .ceb(p2_en),
@@ -111,7 +110,7 @@ module LcdVga
         if (p2_en) begin
             p3_en <= 1;
             p3_addr <= {p2_data[6:0], p2_y[3:0], p2_x[2:0]};
-            p3_color <= p2_data[15:8];
+            {p3_bg,p3_fg} <= p2_data[15:8];
         end else begin
             p3_en <= 0;
         end
@@ -119,11 +118,12 @@ module LcdVga
 
     // phase3: read font data
     reg p3_en;
-    reg [7:0] p3_color;
+    reg [3:0] p3_fg;
+    reg [3:0] p3_bg;
     reg [13:0] p3_addr;
     reg p3_data;
     FontRom font(
-        .clk(clk_pix),
+        .clk(~clk_pix),
         .reset(~reset),
         .ad(p3_addr),
         .dout(p3_data),
@@ -133,7 +133,7 @@ module LcdVga
     always @( posedge clk_pix) begin
         if (p3_en) begin
             p4_en = 1;
-            p4_color <= p3_data ? p3_color[7:4] : p3_color[3:0];
+            p4_color <= p3_data ? p3_fg : p3_bg ;
         end else begin
             p4_en = 0;
         end
@@ -151,7 +151,7 @@ module LcdVga
         if (p4_en) begin
             LCD_DATA <= p4_rgb;
         end else begin
-            LCD_DATA <= 0;
+            LCD_DATA <= p0_y;
         end
     end
 
