@@ -1,0 +1,15 @@
+[General]
+ipc_version=4
+file=font
+module=FontRom
+target_device=gw1nz1-015
+type=ram_prom
+version=1.0
+
+[Config]
+DEPTH=16384
+LANG=0
+MEM_FILE=../../font.mi
+READ=0
+RESET_MODE=true
+WIDTH=1

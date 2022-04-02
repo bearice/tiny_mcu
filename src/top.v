@@ -77,34 +77,31 @@ LcdVga vga(
     .LCD_CLK(LCD_CLK),
     .LCD_HSYNC(LCD_HYNC),
     .LCD_VSYNC(LCD_SYNC),
-
-    .LCD_B(LCD_B),
-    .LCD_G(LCD_G),
-    .LCD_R(LCD_R),
-
-    .offset_x_in(offset_x),
-    .offset_y_in(offset_y),
-    .frame_int(frame_int)
+    .LCD_DATA({LCD_R,LCD_G,LCD_B}),
+    .frame_int(frame_int),
+    .ram_clk(clk_36m),
+    .ram_reset(reset),
+    .ram_ce(0)
 );
 
-always @(posedge frame_int or negedge reset) begin
-    if (!reset) begin
-        offset_x <= 123;
-        offset_y <= 234;
-        dir_x <= 1;
-        dir_y <= 1;
-    end else begin
-        if (offset_x < 0) dir_x <= 3;
-        else if (offset_x >= 800-64) dir_x <= -1;
+// always @(posedge frame_int or negedge reset) begin
+//     if (!reset) begin
+//         offset_x <= 123;
+//         offset_y <= 234;
+//         dir_x <= 1;
+//         dir_y <= 1;
+//     end else begin
+//         if (offset_x < 0) dir_x <= 3;
+//         else if (offset_x >= 800-64) dir_x <= -1;
         
-        offset_x <= offset_x+dir_x;
+//         offset_x <= offset_x+dir_x;
 
-        if (offset_y < 0) dir_y <= 2;
-        else if (offset_y > 480-64) dir_y <= -1;
+//         if (offset_y < 0) dir_y <= 2;
+//         else if (offset_y > 480-64) dir_y <= -1;
          
-        offset_y <= offset_y+dir_y;
-    end
-end
+//         offset_y <= offset_y+dir_y;
+//     end
+// end
 //reg [7:0] tx_buf;
 //wire [7:0] rx_buf;
 
