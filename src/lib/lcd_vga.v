@@ -31,7 +31,7 @@ module LcdVga
     localparam H_Max = H_Data + H_BackPorch + H_FrontPorch;
     localparam V_Max = V_Data + V_BackPorch + V_FrontPorch;
 
-    localparam FontWidth = 8*2;
+    localparam FontWidth = 8*2; // resolution reduced by 2x, so multiply by 2
     localparam FontHeight = 16*2;
 
     localparam CharPerLine = H_Data / FontWidth;
@@ -106,10 +106,10 @@ module LcdVga
         .din(ram_data),
         .ada(ram_addr)
     );
-    always @( posedge clk_pix) begin
+    always @(posedge clk_pix) begin
         if (p2_en) begin
             p3_en <= 1;
-            p3_addr <= {p2_data[6:0], p2_y[4:1], p2_x[3:1]};
+            p3_addr <= {p2_data[6:0], p2_y[4:1], p2_x[3:1]}; // Since we are reducing resolution by 2, both x and y need to be shifted by 1.
             {p3_bg,p3_fg} <= p2_data[15:8];
         end else begin
             p3_en <= 0;
@@ -130,7 +130,7 @@ module LcdVga
         .ce(p3_en),
         .oce(p3_en)
     );
-    always @( posedge clk_pix) begin
+    always @(posedge clk_pix) begin
         if (p3_en) begin
             p4_en = 1;
             p4_color <= p3_data ? p3_fg : p3_bg ;
@@ -147,7 +147,7 @@ module LcdVga
         .dout(p4_rgb),
         .ad(p4_color)
     );
-    always @( posedge clk_pix) begin
+    always @(posedge clk_pix) begin
         if (p4_en) begin
             LCD_DATA <= p4_rgb;
         end else begin
