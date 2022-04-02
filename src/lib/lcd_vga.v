@@ -19,20 +19,20 @@ module LcdVga
 
 );
     localparam H_BackPorch = 16'sd46;
-    localparam H_Pluse = 16'sd1; 
+    localparam H_Pluse = 16'd1; 
     localparam H_Data = 16'sd800;
     localparam H_FrontPorch= 16'sd294; //was 210, use 294 to make 60Hz frame rate @clk 36Mhz
 
     localparam V_BackPorch = 16'sd23;
-    localparam V_Pluse = 16'sd5; 
+    localparam V_Pluse = 16'd5; 
     localparam V_Data = 16'sd480;
     localparam V_FrontPorch= 16'sd23;
 
     localparam H_Max = H_Data + H_BackPorch + H_FrontPorch;
     localparam V_Max = V_Data + V_BackPorch + V_FrontPorch;
 
-    localparam FontWidth = 8;
-    localparam FontHeight = 16;
+    localparam FontWidth = 8*2;
+    localparam FontHeight = 16*2;
 
     localparam CharPerLine = H_Data / FontWidth;
     localparam LinePerPage = V_Data / FontHeight;
@@ -43,8 +43,8 @@ module LcdVga
     wire x_en = p0_x >= H_BackPorch && p0_x < H_Max-H_FrontPorch;
     wire y_en = p0_y >= V_BackPorch && p0_y < V_Max-V_FrontPorch;
 
-    assign LCD_HSYNC = p0_x > H_Pluse;
-    assign LCD_VSYNC = p0_y > V_Pluse;
+    assign LCD_HSYNC = p0_x[14:0] > H_Pluse;
+    assign LCD_VSYNC = p0_y[14:0] > V_Pluse;
     assign LCD_DEN = x_en & y_en;
     assign LCD_CLK = ~clk_pix; //clk_pix is inverted to avoid setup time issue
 
@@ -89,7 +89,7 @@ module LcdVga
     reg p2_en;
     reg signed [15:0] p2_x;
     reg signed [15:0] p2_y;
-    reg [11:0] p2_addr; //Address of the text ram
+    reg [9:0] p2_addr; //Address of the text ram
     wire [15:0] p2_data; //Data from the text ram
     TextRam ram(
         //read on port b
@@ -109,7 +109,7 @@ module LcdVga
     always @( posedge clk_pix) begin
         if (p2_en) begin
             p3_en <= 1;
-            p3_addr <= {p2_data[6:0], p2_y[3:0], p2_x[2:0]};
+            p3_addr <= {p2_data[6:0], p2_y[4:1], p2_x[3:1]};
             {p3_bg,p3_fg} <= p2_data[15:8];
         end else begin
             p3_en <= 0;
