@@ -48,6 +48,6 @@ flash: all
 	${PROG} --device ${DEVICE} --operation_index ${OPERA} --fsFile "${OUTOPUT_FS}" --cable-index ${CABLE} --frequency ${FREQ}
 
 clean:
-	${RM} -f ${OUTOPUT_FS} ${MODS} ${MEM_INIT}
+	${RM} -rf ${OUTOPUT_FS} ${MODS} ${MEM_INIT} impl
 
 .PHONY: all clean flash
