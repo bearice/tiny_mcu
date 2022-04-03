@@ -14,27 +14,27 @@ module uart (
         output rx_error
     );
 
-    uart_tx tx (
-                .clk(clk),
-                .reset(reset),
-                .prescale(prescale),
+    uart_tx (
+            .clk(clk),
+            .reset(reset),
+            .prescale(prescale),
 
-                .we(we),
-                .tx_data(tx_data),
-                .tx(tx),
-                .tx_busy(tx_busy)
-            );
+            .we(we),
+            .tx_data(tx_data),
+            .tx(tx),
+            .tx_busy(tx_busy)
+        );
 
-    uart_rx rx (
-                .clk(clk),
-                .reset(reset),
-                .prescale(prescale),
+    uart_rx (
+            .clk(clk),
+            .reset(reset),
+            .prescale(prescale),
 
-                .rx(rx),
-                .rx_data(rx_data),
-                .rx_busy(rx_busy),
-                .rx_error(rx_error)
-            );
+            .rx(rx),
+            .rx_data(rx_data),
+            .rx_busy(rx_busy),
+            .rx_error(rx_error)
+        );
 
 endmodule
 

@@ -7,9 +7,9 @@
 -dev_type GW1NZ-1
 -mod_name ColorPalette
 -file_name color_palette
--path C:/Users/bearice/Documents/NanoTang/tiny_muc/src/gowin_rom16/
+-path mods/
 -type SSRAM_ROM
 -file_type vlg
 -ssram_depth 16
 -ssram_width 16
--init_file C:/Users/bearice/Documents/NanoTang/tiny_muc/palette.mi
+-init_file resource/palette.mi

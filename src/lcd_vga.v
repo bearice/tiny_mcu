@@ -90,21 +90,21 @@ module LcdVga (
     reg signed [15:0] p2_y;
     reg [9:0] p2_addr; //Address of the text ram
     wire [15:0] p2_data; //Data from the text ram
-    TextRam ram (
-                //read on port b
-                .clkb(~clk_pix), // ram & rom need half clock to read from memory, so invert the clock.
-                .resetb(~reset), // reset is high active, input is low active, so invert the reset.
-                .adb(p2_addr),
-                .dout(p2_data),
-                .ceb(p2_en),
-                .oce(p2_en),
-                //write on port a
-                .clka(ram_clk),
-                .reseta(~ram_reset),
-                .cea(ram_ce),
-                .din(ram_data),
-                .ada(ram_addr)
-            );
+    VRam ram (
+             //read on port b
+             .clkb(~clk_pix), // ram & rom need half clock to read from memory, so invert the clock.
+             .resetb(~reset), // reset is high active, input is low active, so invert the reset.
+             .adb(p2_addr),
+             .dout(p2_data),
+             .ceb(p2_en),
+             .oce(p2_en),
+             //write on port a
+             .clka(ram_clk),
+             .reseta(~ram_reset),
+             .cea(ram_ce),
+             .din(ram_data),
+             .ada(ram_addr)
+         );
     always @(posedge clk_pix) begin
         if (p2_en) begin
             p3_en <= 1;

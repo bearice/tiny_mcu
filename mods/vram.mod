@@ -4,9 +4,9 @@
 -part_number GW1NZ-LV1QN48C6/I5
 
 
--mod_name TextRam
--file_name text_ram
--path C:/Users/bearice/Documents/NanoTang/tiny_muc/src/gowin_sdpb/
+-mod_name VRam
+-file_name vram
+-path mods/
 -type RAM_SDP
 -file_type vlg
 -bram_b true
@@ -16,5 +16,5 @@
 -width_1 16
 -read_mode bypass
 -reset_mode sync
--init_file C:\Users\bearice\Documents\NanoTang\tiny_muc\hello.mi
+-init_file resource/vram.mi
 -init_match port_A

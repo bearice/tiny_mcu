@@ -29,6 +29,7 @@ colors = [
     0x404040,
     0x000000,
 ]
+
 print("#File_format=Hex")
 print("#Address_depth={}".format(16))
 print("#Data_width={}".format(16))

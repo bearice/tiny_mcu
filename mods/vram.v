@@ -4,9 +4,9 @@
 //GOWIN Version: V1.9.8.05
 //Part Number: GW1NZ-LV1QN48C6/I5
 //Device: GW1NZ-1
-//Created Time: Sat Apr 02 22:43:16 2022
+//Created Time: Sun Apr 03 21:49:52 2022
 
-module TextRam (dout, clka, cea, reseta, clkb, ceb, resetb, oce, ada, din, adb);
+module VRam (dout, clka, cea, reseta, clkb, ceb, resetb, oce, ada, din, adb);
 
 output [15:0] dout;
 input clka;
@@ -97,4 +97,4 @@ defparam sdpb_inst_0.INIT_RAM_2C = 256'hAB21A964A86CA772A66FA557A420A36FA26CA16C
 defparam sdpb_inst_0.INIT_RAM_2D = 256'hCB6CCA6CC965C848B721B664B56CB472B36FB257B120B06FBF6CBE6CBD65BC48;
 defparam sdpb_inst_0.INIT_RAM_2E = 256'h00000000DA20D96FD86CD76CD665D548C421C364C26CC172C06FCF57CE20CD6F;
 
-endmodule //TextRam
+endmodule //VRam

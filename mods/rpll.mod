@@ -5,8 +5,8 @@
 
 
 -mod_name Gowin_rPLL
--file_name gowin_rpll
--path C:/Users/bearice/Documents/NanoTang/tiny_muc/src/gowin_rpll/
+-file_name rpll
+-path mods/
 -type PLL
 -rPll true
 -file_type vlg

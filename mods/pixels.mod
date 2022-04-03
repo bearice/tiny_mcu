@@ -6,7 +6,7 @@
 
 -mod_name PixelsROM
 -file_name pixels
--path C:/Users/bearice/Documents/NanoTang/tiny_muc/src/gowin_prom/
+-path mods/
 -type RAM_ROM
 -file_type vlg
 -pROM true
@@ -14,4 +14,4 @@
 -width 16
 -read_mode bypass
 -reset_mode sync
--init_file C:\Users\bearice\Documents\NanoTang\tiny_muc\bmp.mi
+-init_file resource/bmp.mi

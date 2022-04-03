@@ -1,13 +1,13 @@
 [General]
 ipc_version=4
-file=gowin_rom16
-module=Gowin_ROM16
+file=color_palette
+module=ColorPalette
 target_device=gw1nz1-015
 type=ssram_rom16
 version=1.0
 
 [Config]
-DEPTH=256
+DEPTH=16
 LANG=0
-MEM_FILE=../../hsv.mi
 WIDTH=16
+MEM_FILE=../resource/palette.mi

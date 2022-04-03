@@ -26,42 +26,42 @@ module top (
                    .clkin(clk_27m)
                );
 
-    //reg [31:0] counter;
-    //reg [9:0] h;
-    //always @(posedge clk_27m or negedge reset) begin
-    //    if (!reset) begin
-    //        counter <= 0;
-    //        h <= 0;
-    //    end
-    //    else if (counter < 27000000/200 )
-    //        counter <= counter + 1;
-    //    else begin
-    //        counter <= 0;
-    //        if (h < 800 )h <= h+1;
-    //        else h<=0;
-    //    end
-    //end
+    reg [31:0] counter;
+    reg [9:0] h;
+    always @(posedge clk_27m or negedge reset) begin
+        if (!reset) begin
+            counter <= 0;
+            h <= 0;
+        end
+        else if (counter < 27000000/200 )
+            counter <= counter + 1;
+        else begin
+            counter <= 0;
+            if (h < 800 )h <= h+1;
+            else h<=0;
+        end
+    end
 
-    //wire [7:0] r;
-    //wire [7:0] g;
-    //wire [7:0] b;
-    //hsv2rgb hsv(
-    //    .r(r), .g(g), .b(b),
-    //    .h(h), .s(255), .v(255)
-    //);
+    wire [7:0] r;
+    wire [7:0] g;
+    wire [7:0] b;
+    hsv2rgb hsv(
+                .r(r), .g(g), .b(b),
+                .h(h), .s(255), .v(255)
+            );
 
-    //led led(
-    //    .clk(clk_27m),
-    //    .rst(reset),
+    led led(
+            .clk(clk_27m),
+            .rst(reset),
 
-    //    .r(r),
-    //    .g(g),
-    //    .b(b),
+            .r(r),
+            .g(g),
+            .b(b),
 
-    //    .LED_R(LED_R),
-    //    .LED_G(LED_G),
-    //    .LED_B(LED_B)
-    //);
+            .LED_R(LED_R),
+            .LED_G(LED_G),
+            .LED_B(LED_B)
+        );
 
     wire frame_int;
     reg signed [15:0] offset_x;
