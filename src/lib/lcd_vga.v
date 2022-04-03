@@ -1,30 +1,29 @@
-module LcdVga
-(
-    input clk_sys,   
-    input clk_pix,
-    input reset,
+module LcdVga (
+        input clk_sys,
+        input clk_pix,
+        input reset,
 
-    output LCD_DEN,
-    output LCD_CLK,
-    output LCD_HSYNC,
-    output LCD_VSYNC,
-    output reg [15:0] LCD_DATA,
-    output reg frame_int,
+        output LCD_DEN,
+        output LCD_CLK,
+        output LCD_HSYNC,
+        output LCD_VSYNC,
+        output reg [15:0] LCD_DATA,
+        output reg frame_int,
 
-    input ram_clk,
-    input ram_reset,
-    input ram_ce,
-    input [15:0] ram_data,
-    input [11:0] ram_addr
+        input ram_clk,
+        input ram_reset,
+        input ram_ce,
+        input [15:0] ram_data,
+        input [11:0] ram_addr
 
-);
+    );
     localparam H_BackPorch = 16'sd46;
-    localparam H_Pluse = 16'd1; 
+    localparam H_Pluse = 16'd1;
     localparam H_Data = 16'sd800;
     localparam H_FrontPorch= 16'sd294; //was 210, use 294 to make 60Hz frame rate @clk 36Mhz
 
     localparam V_BackPorch = 16'sd23;
-    localparam V_Pluse = 16'd5; 
+    localparam V_Pluse = 16'd5;
     localparam V_Data = 16'sd480;
     localparam V_FrontPorch= 16'sd23;
 
@@ -56,7 +55,7 @@ module LcdVga
             frame_int <=0;
             p1_x <= 0;
             p1_y <= 0;
-        end else begin 
+        end else begin
             if( p0_y == V_Max ) begin
                 p0_y <= 0;
                 p0_x <= 0;
@@ -81,7 +80,7 @@ module LcdVga
             p2_x <= p1_x;
             p2_y <= p1_y;
             p2_addr <= (p1_x / FontWidth) + ((p1_y / FontHeight) * CharPerLine);
-        end else 
+        end else
             p2_en <= 0;
     end
 
@@ -91,21 +90,21 @@ module LcdVga
     reg signed [15:0] p2_y;
     reg [9:0] p2_addr; //Address of the text ram
     wire [15:0] p2_data; //Data from the text ram
-    TextRam ram(
-        //read on port b
-        .clkb(~clk_pix), // ram & rom need half clock to read from memory, so invert the clock.
-        .resetb(~reset), // reset is high active, input is low active, so invert the reset.
-        .adb(p2_addr),
-        .dout(p2_data),
-        .ceb(p2_en),
-        .oce(p2_en),
-        //write on port a
-        .clka(ram_clk),
-        .reseta(~ram_reset),
-        .cea(ram_ce),
-        .din(ram_data),
-        .ada(ram_addr)
-    );
+    TextRam ram (
+                //read on port b
+                .clkb(~clk_pix), // ram & rom need half clock to read from memory, so invert the clock.
+                .resetb(~reset), // reset is high active, input is low active, so invert the reset.
+                .adb(p2_addr),
+                .dout(p2_data),
+                .ceb(p2_en),
+                .oce(p2_en),
+                //write on port a
+                .clka(ram_clk),
+                .reseta(~ram_reset),
+                .cea(ram_ce),
+                .din(ram_data),
+                .ada(ram_addr)
+            );
     always @(posedge clk_pix) begin
         if (p2_en) begin
             p3_en <= 1;
@@ -122,14 +121,14 @@ module LcdVga
     reg [3:0] p3_bg;
     reg [13:0] p3_addr;
     reg p3_data;
-    FontRom font(
-        .clk(~clk_pix),
-        .reset(~reset),
-        .ad(p3_addr),
-        .dout(p3_data),
-        .ce(p3_en),
-        .oce(p3_en)
-    );
+    FontRom font (
+                .clk(~clk_pix),
+                .reset(~reset),
+                .ad(p3_addr),
+                .dout(p3_data),
+                .ce(p3_en),
+                .oce(p3_en)
+            );
     always @(posedge clk_pix) begin
         if (p3_en) begin
             p4_en = 1;
@@ -143,10 +142,10 @@ module LcdVga
     reg p4_en;
     reg [3:0] p4_color;
     wire [15:0] p4_rgb;
-    ColorPalette(
-        .dout(p4_rgb),
-        .ad(p4_color)
-    );
+    ColorPalette color_palette (
+                     .dout(p4_rgb),
+                     .ad(p4_color)
+                 );
     always @(posedge clk_pix) begin
         if (p4_en) begin
             LCD_DATA <= p4_rgb;

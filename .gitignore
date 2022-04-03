@@ -2,3 +2,4 @@ impl
 *.user
 *_tmp.v
 *.log
+*-draft.*
