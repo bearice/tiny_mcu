@@ -30,11 +30,13 @@ module LcdVga (
     localparam H_Max = H_Data + H_BackPorch + H_FrontPorch;
     localparam V_Max = V_Data + V_BackPorch + V_FrontPorch;
 
-    localparam FontWidth = 8*2; // resolution reduced by 2x, so multiply by 2
-    localparam FontHeight = 16*2;
+    localparam FontWidth = 8;
+    localparam FontHeight = 16;
 
-    localparam CharPerLine = H_Data / FontWidth;
-    localparam LinePerPage = V_Data / FontHeight;
+    localparam CharPerLine = H_Data / FontWidth / 2;
+    localparam LinePerPage = V_Data / FontHeight / 2;
+
+    localparam pipeline_length = 6;
 
     reg signed [15:0] p0_x;
     reg signed [15:0] p0_y;
@@ -53,8 +55,6 @@ module LcdVga (
             p0_y <= 0;
             p0_x <= 0;
             frame_int <=0;
-            p1_x <= 0;
-            p1_y <= 0;
         end else begin
             if( p0_y == V_Max ) begin
                 p0_y <= 0;
@@ -66,16 +66,28 @@ module LcdVga (
                 p0_x <= p0_x + 1;
             end
             frame_int <= p0_y == V_Data + V_BackPorch;
-            p1_x <= p0_x-H_BackPorch + 5; // we have 5 stage pipeline for each pixel, so add 5.
-            p1_y <= p0_y-V_BackPorch;
+            p00_x <= p0_x-H_BackPorch + pipeline_length; // if we have a N stage pipeline for each pixel, we need to add N to x in advance.
+            p00_y <= p0_y-V_BackPorch; // line number doesnt need to mangle because pipeline_length is smaller than V_FrontPorch
         end
     end
+
+    // phase 0.5: map cordinates
+    reg signed [15:0] p00_x;
+    reg signed [15:0] p00_y;
+    always @(posedge clk_pix) begin
+        // flip upside down, reduce resolution by 2x
+        p1_x <= ((H_Data-1)-p00_x)>>1;
+        p1_y <= ((V_Data-1)-p00_y)>>1;
+        p1_en <= p00_x>=0 && p00_y>=0 && p00_x<H_Data && p00_y<V_Data;
+    end
+
 
     // phase1: map pixel to text address
     reg signed [15:0] p1_x;
     reg signed [15:0] p1_y;
+    reg p1_en;
     always @(posedge clk_pix) begin
-        if (p1_x>=0 && p1_y>=0 && p1_x<H_Data && p1_y<V_Data) begin
+        if (p1_en) begin
             p2_en <= 1;
             p2_x <= p1_x;
             p2_y <= p1_y;
@@ -108,7 +120,7 @@ module LcdVga (
     always @(posedge clk_pix) begin
         if (p2_en) begin
             p3_en <= 1;
-            p3_addr <= {p2_data[6:0], p2_y[4:1], p2_x[3:1]}; // Since we are reducing resolution by 2, both x and y need to be shifted by 1.
+            p3_addr <= {p2_data[6:0], p2_y[3:0], p2_x[2:0]};
             {p3_bg,p3_fg} <= p2_data[15:8];
         end else begin
             p3_en <= 0;
