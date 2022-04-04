@@ -9,6 +9,7 @@ add_file -type verilog "src/pwm.v"
 add_file -type verilog "src/uart.v"
 add_file -type verilog "src/top.v"
 add_file -type cst "src/tang_nano_1k.cst"
+add_file -type sdc "src/tang_nano_1k.sdc"
 set_device GW1NZ-LV1QN48C6/I5 -name GW1NZ-1
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name tiny_mcu

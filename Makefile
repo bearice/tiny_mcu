@@ -10,13 +10,14 @@ TCL_SCRIPT=tiny_mcu.tcl
 SOURCE=$(shell ${FIND} src -name "*.v")
 MODS=mods/font.v mods/vram.v mods/color_palette.v mods/rpll.v
 MEM_INIT=resource/font.mi resource/vram.mi resource/palette.mi 
+CONSTRAINTS=src/tang_nano_1k.cst src/tang_nano_1k.sdc
 
 OUTOPUT_FS=$(abspath impl/pnr/tiny_mcu.fs)
 DEVICE=GW1NZ-1
 # 2: program sram, 6: program flash
 OPERA=2
 CABLE=4
-FREQ=2MHz
+FREQ=2.5MHz
 
 all: ${OUTOPUT_FS}
 
@@ -41,7 +42,7 @@ mods/color_palette.v: mods/color_palette.mod resource/palette.mi
 mods/rpll.v: mods/rpll.mod
 	${MODGEN} -do $(abspath $<)
 
-${OUTOPUT_FS}: ${SOURCE} ${MODS} ${TCL_SCRIPT}
+${OUTOPUT_FS}: ${SOURCE} ${MODS} ${TCL_SCRIPT} ${CONSTRAINTS}
 	${GO_SH} ${TCL_SCRIPT}
 
 flash: all
