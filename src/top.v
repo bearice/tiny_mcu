@@ -4,8 +4,8 @@ module top (
         output LED_B,
 
         output LCD_CLK,
-        output LCD_HYNC,
-        output LCD_SYNC,
+        output LCD_HSYNC,
+        output LCD_VSYNC,
         output LCD_DEN,
         output [4:0] LCD_R,
         output [5:0] LCD_G,
@@ -75,8 +75,8 @@ module top (
 
                .LCD_DEN(LCD_DEN),
                .LCD_CLK(LCD_CLK),
-               .LCD_HSYNC(LCD_HYNC),
-               .LCD_VSYNC(LCD_SYNC),
+               .LCD_HSYNC(LCD_HSYNC),
+               .LCD_VSYNC(LCD_VSYNC),
                .LCD_DATA({LCD_R,LCD_G,LCD_B}),
                .frame_int(frame_int),
                .ram_clk(clk_36m),
