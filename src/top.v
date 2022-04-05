@@ -13,7 +13,7 @@ module top (
 
         output uart_tx,
         input uart_rx,
-
+        input KEY,
         input clk_27m,
         input reset
     );
@@ -64,10 +64,8 @@ module top (
         );
 
     wire frame_int;
-    reg signed [15:0] offset_x;
-    reg signed [15:0] offset_y;
-    reg signed [15:0] dir_x;
-    reg signed [15:0] dir_y;
+    reg [1:0] dir;
+    reg [1:0] next_dir;
     LcdVga vga (
                .clk_sys(clk_144m),
                .clk_pix(clk_36m),
@@ -78,30 +76,27 @@ module top (
                .LCD_HSYNC(LCD_HSYNC),
                .LCD_VSYNC(LCD_VSYNC),
                .LCD_DATA({LCD_R,LCD_G,LCD_B}),
+               .direction(dir),
                .frame_int(frame_int),
                .ram_clk(clk_36m),
                .ram_reset(reset),
                .ram_ce(0)
            );
 
-    // always @(posedge frame_int or negedge reset) begin
-    //     if (!reset) begin
-    //         offset_x <= 123;
-    //         offset_y <= 234;
-    //         dir_x <= 1;
-    //         dir_y <= 1;
-    //     end else begin
-    //         if (offset_x < 0) dir_x <= 3;
-    //         else if (offset_x >= 800-64) dir_x <= -1;
+    wire key_pressed;
+    Debouncer d(.clk(clk_27m),.btn(KEY),.out(key_pressed));
 
-    //         offset_x <= offset_x+dir_x;
+    always @(posedge key_pressed) begin
+        next_dir <= next_dir + 1;
+    end
 
-    //         if (offset_y < 0) dir_y <= 2;
-    //         else if (offset_y > 480-64) dir_y <= -1;
+    always @(posedge frame_int or negedge reset) begin
+        if (!reset) begin
+            dir <= 0;
+        end
+        else if (!KEY) dir <= next_dir;
+    end
 
-    //         offset_y <= offset_y+dir_y;
-    //     end
-    // end
     //reg [7:0] tx_buf;
     //wire [7:0] rx_buf;
 
