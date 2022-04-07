@@ -57,7 +57,7 @@ module SevenSegLed(
             4'h8: led_code = 8'b01111111;
             4'h9: led_code = 8'b01101111;
             4'ha: led_code = 8'b01110111;
-            4'hb: led_code = 8'b00011111;
+            4'hb: led_code = 8'b01111100;
             4'hc: led_code = 8'b00111001;
             4'hd: led_code = 8'b01011110;
             4'he: led_code = 8'b01111001;

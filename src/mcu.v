@@ -150,9 +150,10 @@ module MCU  (
                     if (mem_ready) begin
                         ir <= data_in;
                         mem_en <= 1'b0;
+                        write_en <= 1'b0;
                         state <= ST_DECODE;
                     end else begin
-                        addr_bus <= r[REG_PC];
+                        addr_bus <= pc;
                         mem_en <= 1'b1;
                         write_en <= 1'b0;
                         state <= ST_FETCH;

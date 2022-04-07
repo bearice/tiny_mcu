@@ -10,11 +10,14 @@ module LcdVga (
         output reg frame_int,
 
         input [1:0] direction,
-        input ram_clk,
-        input ram_reset,
-        input ram_ce,
-        input [15:0] ram_data,
-        input [11:0] ram_addr
+        input vram_clk,
+        input vram_reset,
+        input vram_ce,
+        input vram_oce,
+        input vram_we,
+        input [11:0] vram_addr,
+        input [15:0] vram_data_in,
+        output [15:0] vram_data_out
     );
     localparam H_BackPorch = 16'd46;
     localparam H_Pluse = 16'd1;
@@ -73,27 +76,27 @@ module LcdVga (
     reg [15:0] p00_y;
     always @(posedge clk_pix) begin
         p1_en <= p00_x<H_Data && p00_y<V_Data;
-        //reduce resolution by 2x, rotate to direction
+        //rotate to direction
         case (direction)
             0: begin
-                p1_x <= p00_x >> 1; // / 2;
-                p1_y <= p00_y >> 1; // / 2;
-                p1_cpl <= H_Data/FontWidth/2;
+                p1_x <= p00_x;
+                p1_y <= p00_y;
+                p1_cpl <= H_Data/FontWidth;
             end
             1: begin
-                p1_x <= (V_Data/2-1)-(p00_y>>1);
-                p1_y <= p00_x >> 1;
-                p1_cpl <= V_Data/FontWidth/2;
+                p1_x <= (V_Data-1)-(p00_y);
+                p1_y <= p00_x;
+                p1_cpl <= V_Data/FontWidth;
             end
             2: begin
-                p1_x <= (H_Data/2-1)-(p00_x>>1);
-                p1_y <= (V_Data/2-1)-(p00_y>>1);
-                p1_cpl <= H_Data/FontWidth/2;
+                p1_x <= (H_Data-1)-(p00_x);
+                p1_y <= (V_Data-1)-(p00_y);
+                p1_cpl <= H_Data/FontWidth;
             end
             3: begin
-                p1_x <= (p00_y>>1);
-                p1_y <= (H_Data/2-1)-(p00_x>>1);
-                p1_cpl <= V_Data/FontWidth/2;
+                p1_x <= (p00_y);
+                p1_y <= (H_Data-1)-(p00_x);
+                p1_cpl <= V_Data/FontWidth;
             end
         endcase
     end
@@ -119,22 +122,27 @@ module LcdVga (
     reg p2_en;
     reg [15:0] p2_x;
     reg [15:0] p2_y;
-    reg [9:0] p2_addr; //Address of the text ram
+    reg [11:0] p2_addr; //Address of the text ram
     wire [15:0] p2_data; //Data from the text ram
     VRam ram (
              //read on port b
              .clkb(~clk_pix), // ram & rom need half clock to read from memory, so invert the clock.
              .resetb(~reset), // reset is high active, input is low active, so invert the reset.
              .adb(p2_addr),
-             .dout(p2_data),
+             .doutb(p2_data),
+             .dinb(16'b0),
              .ceb(p2_en),
-             .oce(p2_en),
+             .oceb(p2_en),
+             .wreb(1'b0),
              //write on port a
-             .clka(ram_clk),
-             .reseta(~ram_reset),
-             .cea(ram_ce),
-             .din(ram_data),
-             .ada(ram_addr)
+             .clka(vram_clk),
+             .reseta(~vram_reset),
+             .cea(vram_ce),
+             .ocea(vram_oce),
+             .wrea(vram_we),
+             .dina(vram_data_in),
+             .douta(vram_data_out),
+             .ada(vram_addr)
          );
     always @(posedge clk_pix) begin
         if (p2_en) begin
