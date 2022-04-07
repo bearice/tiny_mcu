@@ -26,42 +26,6 @@ module top (
                    .clkin(clk_27m)
                );
 
-    reg [31:0] counter;
-    reg [9:0] h;
-    always @(posedge clk_27m or negedge reset) begin
-        if (!reset) begin
-            counter <= 0;
-            h <= 0;
-        end
-        else if (counter < 27000000/200 )
-            counter <= counter + 1;
-        else begin
-            counter <= 0;
-            if (h < 800 )h <= h+1;
-            else h<=0;
-        end
-    end
-
-    wire [7:0] r;
-    wire [7:0] g;
-    wire [7:0] b;
-    hsv2rgb hsv(
-                .r(r), .g(g), .b(b),
-                .h(h), .s(255), .v(255)
-            );
-
-    led led(
-            .clk(clk_27m),
-            .rst(reset),
-
-            .r(r),
-            .g(g),
-            .b(b),
-
-            .LED_R(LED_R),
-            .LED_G(LED_G),
-            .LED_B(LED_B)
-        );
 
     wire frame_int;
     reg [1:0] dir;
@@ -78,9 +42,11 @@ module top (
                .LCD_DATA({LCD_R,LCD_G,LCD_B}),
                .direction(dir),
                .frame_int(frame_int),
-               .ram_clk(clk_36m),
+               .ram_clk(clk_144m),
                .ram_reset(reset),
-               .ram_ce(0)
+               .ram_ce(rx_ready),
+               .ram_addr(ram_addr),
+               .ram_data({8'hf0,rx_buf})
            );
 
     wire key_pressed;
@@ -97,16 +63,67 @@ module top (
         else if (!KEY) dir <= next_dir;
     end
 
-    //reg [7:0] tx_buf;
-    //wire [7:0] rx_buf;
+    reg [11:0] ram_addr;
+    reg [7:0] tx_buf;
+    wire [7:0] rx_buf;
+    wire rx_ready;
+    wire rx_error;
+    wire rx_busy;
+    wire tx_busy;
+    reg tx_ready;
+    uart_rx urx(
+                .clk(clk_144m),
+                .reset(reset),
+                .prescale(144*1000*1000/115200),
+                .rx(uart_rx),
+                .rx_data(rx_buf),
+                .rx_ready(rx_ready),
+                .rx_error(rx_error),
+                .rx_busy(rx_busy)
+            );
+    uart_tx utx(
+                .clk(clk_144m),
+                .reset(reset),
+                .prescale(144*1000*1000/115200),
+                .tx(uart_tx),
+                .tx_data(tx_buf),
+                .tx_ready(tx_ready),
+                .tx_busy(tx_busy)
+            );
+    always @(posedge clk_144m ) begin
+        tx_ready <= rx_ready;
+        tx_buf <= rx_buf+1 ;
+    end
+    always @(posedge rx_ready or negedge reset) begin
+        if (!reset) begin
+            ram_addr <= 0;
+        end else begin
+            ram_addr <= ram_addr < 750 ? ram_addr + 1 : 0;
+        end
+    end
+    assign LED_R=~tx_ready;
+    assign LED_G=~tx_busy;
+    assign LED_B=~rx_error;
+    // reg [7:0] h;
+    // wire [7:0] r;
+    // wire [7:0] g;
+    // wire [7:0] b;
+    // hsv2rgb hsv(
+    //             .r(r), .g(g), .b(b),
+    //             .h(h), .s(255), .v(255)
+    //         );
 
-    //uart(
-    //    .clk(clk_144m),
-    //    .reset(reset),
-    //    .tx(uart_tx),
-    //    .rx(uart_rx),
-    //    .tx_data(tx_buf),
-    //    .rx_data(rx_buf)
-    //);
+    // led led(
+    //         .clk(clk_27m),
+    //         .rst(reset),
+
+    //         .r(r),
+    //         .g(g),
+    //         .b(b),
+
+    //         .LED_R(LED_R),
+    //         .LED_G(LED_G),
+    //         .LED_B(LED_B)
+    //     );
 
 endmodule
