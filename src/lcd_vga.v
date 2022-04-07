@@ -60,7 +60,7 @@ module LcdVga (
             LCD_DEN <= x_en & y_en;
             frame_int <= p0_y == V_Data + V_BackPorch;
 
-            p00_x <= p0_x-H_BackPorch + pipeline_length; // if we have a N stage pipeline for each pixel, we need to add N to x in advance.
+            p00_x <= p0_x-H_BackPorch + pipeline_length - 1; // if we have a N stage pipeline for each pixel, we need to add N-1 to x in advance.
             p00_y <= p0_y-V_BackPorch; // line number doesnt need to mangle because pipeline_length is smaller than V_FrontPorch
         end
     end
