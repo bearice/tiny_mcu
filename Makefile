@@ -10,7 +10,7 @@ TCL_SCRIPT=tiny_mcu.tcl
 SOURCE=$(shell ${FIND} src -name "*.v")
 MODS=mods/font.v mods/vram.v mods/color_palette.v mods/rpll.v
 MEM_INIT=resource/font.mi resource/vram.mi resource/palette.mi 
-CONSTRAINTS=src/tang_nano_1k.cst src/tang_nano_1k.sdc
+CONSTRAINTS=src/tang_nano_1k.cst src/tiny_mcu.sdc
 
 OUTOPUT_FS=$(abspath impl/pnr/tiny_mcu.fs)
 DEVICE=GW1NZ-1
