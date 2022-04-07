@@ -2,9 +2,9 @@
 //All rights reserved.
 //File Title: IP file
 //GOWIN Version: V1.9.8.05
-//Part Number: GW1NZ-LV1QN48C6/I5
-//Device: GW1NZ-1
-//Created Time: Sun Apr 03 21:48:52 2022
+//Part Number: GW1NR-LV9QN88C6/I5
+//Device: GW1NR-9C
+//Created Time: Thu Apr 07 21:09:13 2022
 
 module ColorPalette (dout, ad);
 

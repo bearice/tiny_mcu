@@ -3,7 +3,7 @@
 <Project>
     <Template>FPGA</Template>
     <Version>5</Version>
-    <Device name="GW1NZ-1" pn="GW1NZ-LV1QN48C6/I5">gw1nz1-015</Device>
+    <Device name="GW1NR-9C" pn="GW1NR-LV9QN88C6/I5">gw1nr9c-000</Device>
     <FileList>
         <File path="mods/font.v" type="file.verilog" enable="1"/>
         <File path="mods/color_palette.v" type="file.verilog" enable="1"/>
@@ -20,7 +20,7 @@
         <File path="src/uart.v" type="file.verilog" enable="1"/>
         <File path="src/debouncer.v" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>
-        <File path="src/tang_nano_1k.cst" type="file.cst" enable="1"/>
+        <File path="src/tang_nano_9k.cst" type="file.cst" enable="1"/>
         <File path="src/tiny_mcu.sdc" type="file.sdc" enable="1"/>
     </FileList>
 </Project>

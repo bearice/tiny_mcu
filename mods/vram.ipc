@@ -2,14 +2,14 @@
 ipc_version=4
 file=vram
 module=vram
-target_device=gw1nz1-015
+target_device=gw1nr9c-000
 type=ram_sdpb
 version=1.0
 
 [Config]
 BYTE_SIZE=0
-DEPTH_A=750
-DEPTH_B=750
+DEPTH_A=3000
+DEPTH_B=3000
 LANG=0
 READ=0
 RESET_MODE=true

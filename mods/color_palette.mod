@@ -1,10 +1,10 @@
--series GW1NZ
--device GW1NZ-1
+-series GW1NR
+-device GW1NR-9C
 -package QFN48
--part_number GW1NZ-LV1QN48C6/I5
+-part_number GW1NR-LV9QN88C6/I5
 
 
--dev_type GW1NZ-1
+-dev_type GW1NR-9C
 -mod_name ColorPalette
 -file_name color_palette
 -path mods/

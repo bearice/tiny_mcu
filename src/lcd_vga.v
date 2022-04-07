@@ -73,27 +73,27 @@ module LcdVga (
     reg [15:0] p00_y;
     always @(posedge clk_pix) begin
         p1_en <= p00_x<H_Data && p00_y<V_Data;
-        //reduce resolution by 2x, rotate to direction
+        //rotate to direction
         case (direction)
             0: begin
-                p1_x <= p00_x >> 1; // / 2;
-                p1_y <= p00_y >> 1; // / 2;
-                p1_cpl <= H_Data/FontWidth/2;
+                p1_x <= p00_x;
+                p1_y <= p00_y;
+                p1_cpl <= H_Data/FontWidth;
             end
             1: begin
-                p1_x <= (V_Data/2-1)-(p00_y>>1);
-                p1_y <= p00_x >> 1;
-                p1_cpl <= V_Data/FontWidth/2;
+                p1_x <= (V_Data-1)-(p00_y);
+                p1_y <= p00_x;
+                p1_cpl <= V_Data/FontWidth;
             end
             2: begin
-                p1_x <= (H_Data/2-1)-(p00_x>>1);
-                p1_y <= (V_Data/2-1)-(p00_y>>1);
-                p1_cpl <= H_Data/FontWidth/2;
+                p1_x <= (H_Data-1)-(p00_x);
+                p1_y <= (V_Data-1)-(p00_y);
+                p1_cpl <= H_Data/FontWidth;
             end
             3: begin
-                p1_x <= (p00_y>>1);
-                p1_y <= (H_Data/2-1)-(p00_x>>1);
-                p1_cpl <= V_Data/FontWidth/2;
+                p1_x <= (p00_y);
+                p1_y <= (H_Data-1)-(p00_x);
+                p1_cpl <= V_Data/FontWidth;
             end
         endcase
     end
@@ -119,7 +119,7 @@ module LcdVga (
     reg p2_en;
     reg [15:0] p2_x;
     reg [15:0] p2_y;
-    reg [9:0] p2_addr; //Address of the text ram
+    reg [11:0] p2_addr; //Address of the text ram
     wire [15:0] p2_data; //Data from the text ram
     VRam ram (
              //read on port b

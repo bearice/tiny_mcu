@@ -13,9 +13,9 @@ add_file -type verilog "src/pwm.v"
 add_file -type verilog "src/uart.v"
 add_file -type verilog "src/debouncer.v"
 add_file -type verilog "src/top.v"
-add_file -type cst "src/tang_nano_1k.cst"
+add_file -type cst "src/tang_nano_9k.cst"
 add_file -type sdc "src/tiny_mcu.sdc"
-set_device GW1NZ-LV1QN48C6/I5 -name GW1NZ-1
+set_device GW1NR-LV9QN88C6/I5 -name GW1NR-9C
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name tiny_mcu
 set_option -top_module top
@@ -23,4 +23,5 @@ set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -use_sspi_as_gpio 1
 set_option -use_mspi_as_gpio 1
+set_option -use_done_as_gpio 1
 run all

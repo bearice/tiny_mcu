@@ -2,7 +2,7 @@
 ipc_version=4
 file=pixels
 module=PixelsROM
-target_device=gw1nz1-015
+target_device=gw1nr9c-000
 type=ram_prom
 version=1.0
 

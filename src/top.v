@@ -1,9 +1,4 @@
 module top (
-        output LED_R,
-        output LED_G,
-        output LED_B,
-        output LED_DATA,LED_SCK,LED_RCK,
-
         output LCD_CLK,
         output LCD_HSYNC,
         output LCD_VSYNC,
@@ -11,6 +6,8 @@ module top (
         output [4:0] LCD_R,
         output [5:0] LCD_G,
         output [4:0] LCD_B,
+        output [5:0] LED,
+        output LED_DATA,LED_SCK,LED_RCK,
 
         output uart_tx,
         input uart_rx,
@@ -116,10 +113,6 @@ module top (
             end
         end
     end
-
-    // assign LED_R=~tx_ready;
-    // assign LED_G=~tx_busy;
-    // assign LED_B=~rx_error;
 
     reg slow_clk;
     reg [31:0] counter;

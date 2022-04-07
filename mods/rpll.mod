@@ -1,7 +1,7 @@
--series GW1NZ
--device GW1NZ-1
+-series GW1NR
+-device GW1NR-9C
 -package QFN48
--part_number GW1NZ-LV1QN48C6/I5
+-part_number GW1NR-LV9QN88C6/I5
 
 
 -mod_name Gowin_rPLL
@@ -10,7 +10,7 @@
 -type PLL
 -rPll true
 -file_type vlg
--dev_type GW1NZ-1
+-dev_type GW1NR-9C
 -dyn_idiv_sel false
 -idiv_sel 3
 -dyn_fbdiv_sel false
