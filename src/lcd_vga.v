@@ -1,5 +1,4 @@
 module LcdVga (
-        input clk_sys,
         input clk_pix,
         input reset,
 
