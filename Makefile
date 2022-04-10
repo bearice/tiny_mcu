@@ -8,8 +8,8 @@ RM="C:\Program Files\Git\usr\bin\rm.exe"
 
 TCL_SCRIPT=tiny_mcu.tcl
 SOURCE=$(shell ${FIND} src -name "*.v")
-MODS=mods/font.v mods/vram.v mods/color_palette.v mods/rpll.v
-MEM_INIT=resource/font.mi resource/vram.mi resource/palette.mi 
+MODS=mods/font.v mods/vram.v mods/color_palette.v mods/rpll.v mods/mcu_ram.v
+MEM_INIT=resource/font.mi resource/vram.mi resource/palette.mi resource/mcu_ram.mi 
 CONSTRAINTS=src/tang_nano_1k.cst src/tiny_mcu.sdc
 
 OUTOPUT_FS=$(abspath impl/pnr/tiny_mcu.fs)
@@ -30,10 +30,16 @@ resource/font.mi: resource/font.py
 resource/palette.mi: resource/palette.py
 	${PYTHON} $< > $@
 
+resource/mcu_ram.mi: resource/mcu_ram.py
+	${PYTHON} $< > $@
+
 mods/font.v: mods/font.mod resource/font.mi 
 	${MODGEN} -do $(abspath $<)
 	
 mods/vram.v: mods/vram.mod resource/vram.mi 
+	${MODGEN} -do $(abspath $<)
+
+mods/mcu_ram.v: mods/mcu_ram.mod resource/mcu_ram.mi 
 	${MODGEN} -do $(abspath $<)
 
 mods/color_palette.v: mods/color_palette.mod resource/palette.mi 

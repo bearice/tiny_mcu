@@ -9,6 +9,10 @@
         <File path="mods/color_palette.v" type="file.verilog" enable="1"/>
         <File path="mods/rpll.v" type="file.verilog" enable="1"/>
         <File path="mods/vram.v" type="file.verilog" enable="1"/>
+        <File path="mods/mcu_ram.v" type="file.verilog" enable="1"/>
+        <File path="src/mcu.v" type="file.verilog" enable="1"/>
+        <File path="src/alu.v" type="file.verilog" enable="1"/>
+        <File path="src/7seg_led.v" type="file.verilog" enable="1"/>
         <File path="src/hsv2rgb.v" type="file.verilog" enable="1"/>
         <File path="src/lcd_vga.v" type="file.verilog" enable="1"/>
         <File path="src/led.v" type="file.verilog" enable="1"/>

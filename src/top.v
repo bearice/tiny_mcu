@@ -2,6 +2,7 @@ module top (
         output LED_R,
         output LED_G,
         output LED_B,
+        output LED_DATA,LED_SCK,LED_RCK,
 
         output LCD_CLK,
         output LCD_HSYNC,
@@ -30,9 +31,9 @@ module top (
     wire frame_int;
     reg [1:0] dir;
     reg [1:0] next_dir;
-    reg [11:0] ram_addr;
-    reg [7:0] ram_data;
-    reg ram_ce;
+    reg [11:0] vram_addr;
+    reg [7:0] vram_data;
+    reg vram_ce;
     LcdVga vga (
                .clk_pix(clk_36m),
                .reset(reset),
@@ -45,14 +46,14 @@ module top (
                .frame_int(frame_int),
                .ram_clk(clk_72m),
                .ram_reset(reset),
-               .ram_ce(ram_ce),
-               .ram_addr(ram_addr),
-               .ram_data({8'hf0,ram_data})
+               .ram_ce(vram_ce),
+               .ram_addr(vram_addr),
+               .ram_data({8'hf0,vram_data})
            );
 
     wire key_pressed;
     Debouncer d(.clk(clk_27m),.btn(KEY),.out(key_pressed));
-    defparam d.FREQ = 72000000;
+    // defparam d.FREQ = 72000000;
 
     always @(posedge key_pressed) begin
         next_dir <= next_dir + 1;
@@ -104,41 +105,76 @@ module top (
 
     always @(posedge clk_72m) begin
         if (!reset) begin
-            ram_addr <= 0;
+            vram_addr <= 0;
         end else begin
             if (char_ready) begin
-                ram_addr <= ram_addr < 750 ? ram_addr + 1 : 0;
-                ram_data <= char_buf;
-                ram_ce <= 1;
+                vram_addr <= vram_addr < 750 ? vram_addr + 1 : 0;
+                vram_data <= char_buf;
+                vram_ce <= 1;
             end else begin
-                ram_ce <= 0;
+                vram_ce <= 0;
             end
         end
     end
 
-    assign LED_R=~tx_ready;
-    assign LED_G=~tx_busy;
-    assign LED_B=~rx_error;
-    // reg [7:0] h;
-    // wire [7:0] r;
-    // wire [7:0] g;
-    // wire [7:0] b;
-    // hsv2rgb hsv(
-    //             .r(r), .g(g), .b(b),
-    //             .h(h), .s(255), .v(255)
-    //         );
+    // assign LED_R=~tx_ready;
+    // assign LED_G=~tx_busy;
+    // assign LED_B=~rx_error;
 
-    // led led(
-    //         .clk(clk_27m),
-    //         .rst(reset),
+    reg slow_clk;
+    reg [31:0] counter;
+    always @(posedge clk_27m) begin
+        if (counter == 27_000_000/4) begin
+            slow_clk <= !slow_clk;
+            counter <= 0;
+        end else begin
+            counter <= counter + 1;
+        end
+    end
 
-    //         .r(r),
-    //         .g(g),
-    //         .b(b),
+    wire [15:0] write_bus;
+    wire [15:0] read_bus;
+    wire [15:0] addr_bus;
+    wire mem_en;
+    wire write_en;
+    reg mem_ready;
 
-    //         .LED_R(LED_R),
-    //         .LED_G(LED_G),
-    //         .LED_B(LED_B)
-    //     );
+    MCU mcu(
+            .clk(slow_clk),
+            .reset(reset),
+            .data_in(read_bus),
+            .data_out(write_bus),
+            .mem_ready(mem_ready),
+            .addr_bus(addr_bus),
+            .mem_en(mem_en),
+            .write_en(write_en),
+            .dbg_state({LED_B,LED_G,LED_R}),
+            .dbg(debug)
+        );
 
+    MCU_RAM ram(
+                .clk(slow_clk),
+                .reset(~reset),
+                .ce(mem_en),
+                .oce(!write_en),
+                .wre(write_en),
+                .ad(addr_bus),
+                .din(write_bus),
+                .dout(read_bus)
+            );
+
+    always @(posedge slow_clk) begin
+        mem_ready <= mem_en;
+    end
+
+    wire [15:0] pc,ir;
+    wire [31:0] debug;
+
+    SevenSegLed debug_led(
+                    .clk(clk_27m),
+                    .data(debug),
+                    .LED_DATA(LED_DATA),
+                    .LED_SCK(LED_SCK),
+                    .LED_RCK(LED_RCK)
+                );
 endmodule
