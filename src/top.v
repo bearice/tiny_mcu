@@ -171,7 +171,7 @@ module top (
     wire [31:0] debug;
 
     SevenSegLed debug_led(
-                    .clk(clk_27m),
+                    .clk(clk_72m),
                     .data(debug),
                     .LED_DATA(LED_DATA),
                     .LED_SCK(LED_SCK),

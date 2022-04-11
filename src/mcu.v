@@ -40,10 +40,12 @@ module MCU  (
     reg [15:0] alu_op1 = x[3] ? x[2:0] : r[x[2:0]];
     reg [15:0] alu_op2 = y[3] ? y[2:0] : r[y[2:0]];
     wire [15:0] alu_out;
+    wire [3:0] alu_flags;
     ALU alu(
             .op(op),
             .in1(alu_op1),
             .in2(alu_op2),
+            .flags(alu_flags),
             .out(alu_out)
         );
 
@@ -101,6 +103,7 @@ module MCU  (
                     if (is_alu) begin
                         out <= alu_out;
                         new_pc <= r[REG_PC] + 1;
+                        r[REG_FLG][3:0] <= {alu_flags};
                         state <= ST_WRITEBACK;
                     end else if(mem_read) begin
                         if (mem_ready) begin
