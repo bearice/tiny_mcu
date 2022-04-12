@@ -145,6 +145,10 @@ module top (
             .dbg(debug)
         );
 
+    assign LED[3] = ~slow_clk;
+    assign LED[4] = ~mem_en;
+    assign LED[5] = ~mem_ready;
+
     MCU_RAM ram(
                 .clk(slow_clk),
                 .reset(~reset),
