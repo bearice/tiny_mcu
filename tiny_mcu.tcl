@@ -15,7 +15,7 @@ add_file -type verilog "src/debouncer.v"
 add_file -type verilog "src/top.v"
 add_file -type cst "src/tang_nano_9k.cst"
 add_file -type sdc "src/tiny_mcu.sdc"
-set_device GW1NR-LV9QN88C6/I5 -name GW1NR-9C
+set_device GW1NR-LV9QN88PC6/I5 -name GW1NR-9C
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name tiny_mcu
 set_option -top_module top

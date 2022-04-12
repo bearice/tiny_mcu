@@ -3,7 +3,7 @@
 <Project>
     <Template>FPGA</Template>
     <Version>5</Version>
-    <Device name="GW1NR-9C" pn="GW1NR-LV9QN88C6/I5">gw1nr9c-000</Device>
+    <Device name="GW1NR-9C" pn="GW1NR-LV9QN88PC6/I5">gw1nr9c-000</Device>
     <FileList>
         <File path="mods/font.v" type="file.verilog" enable="1"/>
         <File path="mods/color_palette.v" type="file.verilog" enable="1"/>

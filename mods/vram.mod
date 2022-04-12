@@ -1,7 +1,7 @@
 -series GW1NR
 -device GW1NR-9C
 -package QFN48
--part_number GW1NR-LV9QN88C6/I5
+-part_number GW1NR-LV9QN88PC6/I5
 
 
 -mod_name VRam
