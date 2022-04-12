@@ -141,7 +141,7 @@ module top (
             .addr_bus(addr_bus),
             .mem_en(mem_en),
             .write_en(write_en),
-            .dbg_state({LED_B,LED_G,LED_R}),
+            .dbg_state(LED[2:0]),
             .dbg(debug)
         );
 
