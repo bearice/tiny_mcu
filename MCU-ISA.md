@@ -3,7 +3,7 @@ ABCD rw  0000-1011
 PC   rw  0100
 SP   rw  0101
 CTL  rw  0110 
-FLG  ro  0111 {C,Z,S,O,0,0,0,0}
+FLG  ro  0111 {12'b0,c,z,s,o}
 IMMx ro  1xxx
 
 Inst:
@@ -30,5 +30,5 @@ AAAA:
 1010 POP  [Y] -> {Z} (X=1001) //mem to reg, Y--
 
 Memory Mapping:
-0000-07ff mcu_ram
-8000-83ff vram
+0000-0fff mcu_ram
+1000-1fff vram

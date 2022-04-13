@@ -9,7 +9,7 @@
 -path mods/
 -type RAM_SP
 -file_type vlg
--depth 2048
+-depth 4096
 -width 16
 -read_mode bypass
 -write_mode normal

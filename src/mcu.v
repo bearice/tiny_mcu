@@ -24,7 +24,14 @@ module MCU  (
     localparam OP_MOVE = 4'b1010;
 
     assign dbg_state = ~state;
-    assign dbg = {r[REG_PC],ir};
+    assign dbg = {
+               //    3'b0,mem_read,
+               //    3'b0,mem_write,
+               //    3'b0,mem_en,
+               //    3'b0,write_en,
+               data_in,
+               pc
+           };
 
     reg [2:0] state;
     reg [15:0] ir;
@@ -34,17 +41,18 @@ module MCU  (
     wire [3:0] x = ir[7:4];
     wire [3:0] y = ir[11:8];
     wire [3:0] z = ir[15:12];
-
+    wire [15:0] pc = r[REG_PC];
     wire [3:0] flags = r[REG_FLG][3:0];
 
-    reg [15:0] alu_op1 = x[3] ? x[2:0] : r[x[2:0]];
-    reg [15:0] alu_op2 = y[3] ? y[2:0] : r[y[2:0]];
+    wire [15:0] alu_x = x[3] == 0 ? r[x[2:0]] : {13'b0,x[2:0]};
+    wire [15:0] alu_y = y[3] == 0 ? r[y[2:0]] : {13'b0,y[2:0]};
+    wire [15:0] alu_z = z[3] == 0 ? r[z[2:0]] : {13'b0,z[2:0]};
     wire [15:0] alu_out;
     wire [3:0] alu_flags;
     ALU alu(
-            .op(op),
-            .in1(alu_op1),
-            .in2(alu_op2),
+            .op(op[2:0]),
+            .in1(alu_x),
+            .in2(alu_y),
             .flags(alu_flags),
             .out(alu_out)
         );
@@ -77,9 +85,10 @@ module MCU  (
                     if (mem_ready) begin
                         ir <= data_in;
                         mem_en <= 1'b0;
+                        write_en <= 1'b0;
                         state <= ST_DECODE;
                     end else begin
-                        addr_bus <= r[REG_PC];
+                        addr_bus <= pc;
                         mem_en <= 1'b1;
                         write_en <= 1'b0;
                         state <= ST_FETCH;
@@ -91,11 +100,12 @@ module MCU  (
                         mem_write <= x[1];
                         incr_z <= x[2];
                         decr_y <= x[3];
+                        out <= alu_y;
                     end else if (op == OP_JUMP) begin //JUMP
                         jmp_en <= ((x&flags)==y)?1'b1:1'b0;
-                        out <= z[3] ? z[2:0] : r[z[2:0]];
+                        out <= alu_z;
                     end else if (op == OP_LOAD) begin //LOAD
-                        out <= z[3] ? {z[15:8],x,y} : {x,y,z[7:0]};
+                        out <= z[3] ? {x,y,r[z[2:0]][7:0]} : {r[z[2:0]][15:8],x,y};
                     end
                     state <= ST_EXECUTE;
                 end
@@ -113,7 +123,7 @@ module MCU  (
                             new_pc <= r[REG_PC] + 1;
                             state <= ST_WRITEBACK;
                         end else begin
-                            addr_bus <= y[3]?r[y[2:0]]:y[2:0];
+                            addr_bus <= alu_y;
                             mem_en <= 1'b1;
                             write_en <= 1'b0;
                             state <= ST_EXECUTE;
@@ -130,16 +140,17 @@ module MCU  (
                     if(mem_write) begin
                         if (mem_ready) begin
                             mem_en <= 1'b0;
+                            write_en <= 1'b0;
                             state <= ST_DONE;
                         end else begin
-                            addr_bus <= r[z[2:0]];
+                            addr_bus <= alu_z;
                             data_out <= out;
                             mem_en <= 1'b1;
                             write_en <= 1'b1;
                             state <= ST_WRITEBACK;
                         end
                     end else begin
-                        if (z < 4'b0111) r[z[2:0]] <= out;
+                        if (z[3]==0 || op == OP_LOAD) r[z[2:0]] <= out;
                         state <= ST_DONE;
                     end
                 end

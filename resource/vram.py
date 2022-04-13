@@ -1,7 +1,7 @@
-l = 3000
+l = 100
 s = "Hello World!"
 print("#File_format=Hex")
-print("#Address_depth={}".format(l))
+print("#Address_depth={}".format(4096))
 print("#Data_width={}".format(16))
 fg = 0
 bg = 15
