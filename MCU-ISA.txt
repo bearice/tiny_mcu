@@ -1,5 +1,5 @@
 Register:
-ABCD rw  0000-1011
+ABCD rw  0000-0011
 PC   rw  0100
 SP   rw  0101
 CTL  rw  0110 
