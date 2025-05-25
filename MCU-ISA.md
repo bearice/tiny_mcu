@@ -185,9 +185,7 @@ This category includes Load Upper Immediate and various control flow instruction
 | `1111`                 | `Cond[3:0]`        | `JCOND cond, imm8`| `if (cond) PC <= PC + imm8`                      | `OpFam, Cond (ir[11:8]), Imm8 (ir[7:0])`       |
 
 ## 5. Memory Mapping
-(This section can be retained if relevant, or updated as needed. Assuming it's still valid for now.)
 
 0000-07ff mcu_ram
-8000-83ff vram
+1000-13ff vram
 
-<!-- Trivial change for new branch creation -->
