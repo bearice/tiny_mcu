@@ -169,7 +169,7 @@ module MCU  (
                         write_en <= 1'b0;
                         state <= ST_DECODE;
                     end else begin
-                        addr_bus <= pc;
+                        addr_bus <= r[REG_PC];
                         mem_en <= 1'b1;
                         write_en <= 1'b0;
                         state <= ST_FETCH;
@@ -340,7 +340,7 @@ module MCU  (
                         if (mem_read && mem_ready) begin // LOAD
                             wb_val <= data_in; // LOAD data for writeback
                             mem_en <= 1'b0;
-                        end else if (mem_read && !mem_ready) { // LOAD - stall
+                        end else if (mem_read && !mem_ready) begin // LOAD - stall
                             state <= ST_EXECUTE; // Re-evaluate in next cycle
                             mem_en <= 1'b1;      // Keep mem_en asserted
                             new_pc <= r[REG_PC]; // Hold PC
@@ -349,11 +349,11 @@ module MCU  (
                             needs_reg_writeback <= 1'b0; 
                             perform_conditional_jump <= 1'b0; 
                             is_alu_op <= 1'b0; 
-                        }
+                        end
                         
-                        if (mem_write && mem_ready) { // STORE
+                        if (mem_write && mem_ready) begin // STORE
                             mem_en <= 1'b0; 
-                        } else if (mem_write && !mem_ready) { // STORE - stall
+                        end else if (mem_write && !mem_ready) begin // STORE - stall
                             state <= ST_EXECUTE; 
                             mem_en <= 1'b1;      
                             write_en <= 1'b1;    
@@ -363,7 +363,7 @@ module MCU  (
                             needs_reg_writeback <= 1'b0; 
                             perform_conditional_jump <= 1'b0; 
                             is_alu_op <= 1'b0; 
-                        }
+                        end
 
                         if (perform_conditional_jump) begin
                             case (cond_jcond)
@@ -403,7 +403,7 @@ module MCU  (
                     if (mem_read && mem_ready) begin // LOAD
                         wb_val <= data_in; // LOAD data for writeback
                         mem_en <= 1'b0;
-                    end else if (mem_read && !mem_ready) { // LOAD - stall
+                    end else if (mem_read && !mem_ready) begin // LOAD - stall
                         state <= ST_EXECUTE; // Re-evaluate in next cycle
                         mem_en <= 1'b1;      // Keep mem_en asserted
                         // All other signals (wb_val, pc_override_en etc.) should hold or be re-evaluated
@@ -415,11 +415,11 @@ module MCU  (
                         needs_reg_writeback <= 1'b0; // Avoid writeback if stalling
                         perform_conditional_jump <= 1'b0; // Avoid jump logic if stalling
                         is_alu_op <= 1'b0; // Avoid ALU flag write if stalling
-                    }
+                    end
                     
-                    if (mem_write && mem_ready) { // STORE
+                    if (mem_write && mem_ready) begin // STORE
                         mem_en <= 1'b0; // Done with memory for this instruction
-                    } else if (mem_write && !mem_ready) { // STORE - stall
+                    end else if (mem_write && !mem_ready) begin // STORE - stall
                         state <= ST_EXECUTE; // Re-evaluate in next cycle
                         mem_en <= 1'b1;      // Keep mem_en asserted
                         write_en <= 1'b1;    // Keep write_en asserted
@@ -429,7 +429,7 @@ module MCU  (
                         needs_reg_writeback <= 1'b0; // Avoid writeback if stalling
                         perform_conditional_jump <= 1'b0; // Avoid jump logic if stalling
                         is_alu_op <= 1'b0; // Avoid ALU flag write if stalling
-                    }
+                    end
 
                     if (perform_conditional_jump) begin
                         // Check JCOND conditions
