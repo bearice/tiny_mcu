@@ -14,6 +14,8 @@ module MCU  (
     localparam ST_WRITEBACK = 3'b100;
     localparam ST_DONE = 3'b111;
 
+    localparam EXCEPTION_VECTOR = 16'h0002; // Exception Handler Address
+
     // Special Register Parameters
     localparam REG_PC  = 4'd15;
     localparam REG_SP  = 4'd14;
@@ -118,6 +120,12 @@ module MCU  (
     reg perform_conditional_jump; // For JCOND
     reg is_true_cond; // Result of condition check for JCOND
 
+    reg invalid_instruction_error;
+    reg bad_address_error;
+
+    reg exception_active; // Flag to indicate an exception is being processed
+    reg [15:0] captured_pc_for_exception; // Stores PC of the faulting instruction
+
     always @(posedge clk or negedge reset) begin
         if (!reset) begin
             int i;
@@ -134,8 +142,16 @@ module MCU  (
             is_alu_op <= 1'b0;
             save_link_address <= 1'b0;
             perform_conditional_jump <= 1'b0;
+            invalid_instruction_error <= 1'b0;
+            bad_address_error <= 1'b0;
+            exception_active <= 1'b0;
+            captured_pc_for_exception <= 16'b0;
         end else begin
             // Default values for control signals at the start of each cycle
+            // invalid_instruction_error and bad_address_error are reset here,
+            // before ST_DECODE uses them. Exception_active is managed by state transitions.
+            invalid_instruction_error <= 1'b0;
+            bad_address_error <= 1'b0;
             is_alu_op <= 1'b0;
             mem_read <= 1'b0;
             mem_write <= 1'b0;
@@ -176,7 +192,11 @@ module MCU  (
                                 ALU_RR_SHL_SPEC: alu_op_internal <= OP_SHL_4BIT;
                                 ALU_RR_SHR_SPEC: alu_op_internal <= OP_SHR_4BIT;
                                 ALU_RR_MUL_SPEC: alu_op_internal <= OP_MUL_4BIT;
-                                default: begin is_alu_op <= 1'b0; needs_reg_writeback <= 1'b0; end // Invalid OpSpecific
+                                default: begin 
+                                    is_alu_op <= 1'b0; 
+                                    needs_reg_writeback <= 1'b0; 
+                                    invalid_instruction_error <= 1'b1; 
+                                end // Invalid OpSpecific
                             endcase
                             
                             if (op_specific_alu_rr == ALU_RR_SHL_SPEC || op_specific_alu_rr == ALU_RR_SHR_SPEC) begin
@@ -185,7 +205,12 @@ module MCU  (
                                 alu_op2 <= r[ry_s2_alu_rr];
                             end
                         end
-                        OPFAMILY_ALU_RR_EXT: begin /* Reserved for future */ needs_reg_writeback <= 1'b0; end
+                        OPFAMILY_ALU_RR_EXT: begin 
+                            /* Reserved for future */ 
+                            is_alu_op <= 1'b0; 
+                            needs_reg_writeback <= 1'b0; 
+                            invalid_instruction_error <= 1'b1; 
+                        end
                         OPFAMILY_ADDI: begin
                             is_alu_op <= 1'b1;
                             needs_reg_writeback <= 1'b1;
@@ -219,17 +244,36 @@ module MCU  (
                             alu_op2 <= {8'h00, imm8_alu_ri}; // Zero-extend imm8
                         end
                         OPFAMILY_LOAD: begin // LOAD Rt, imm4(Rs_addr)
-                            mem_read <= 1'b1;
-                            addr_bus <= r[rs_addr_load_store] + {{12{1'b0}}, imm4_load_store};
-                            needs_reg_writeback <= 1'b1;
-                            wb_reg_idx <= rt_load_store;
-                            // wb_val will be set from data_in in ST_EXECUTE
+                            reg [15:0] potential_addr_bus_load; // Use specific name for clarity
+                            potential_addr_bus_load = r[rs_addr_load_store] + {{12{1'b0}}, imm4_load_store};
+                            addr_bus <= potential_addr_bus_load;
+                            
+                            if (!((potential_addr_bus_load >= 16'h0000 && potential_addr_bus_load <= 16'h07FF) || 
+                                  (potential_addr_bus_load >= 16'h1000 && potential_addr_bus_load <= 16'h13FF))) begin
+                                bad_address_error <= 1'b1;
+                                needs_reg_writeback <= 1'b0; // No valid data to load
+                                mem_read <= 1'b0; // Do not assert mem_read
+                            end else begin
+                                mem_read <= 1'b1;
+                                needs_reg_writeback <= 1'b1;
+                                wb_reg_idx <= rt_load_store;
+                                // wb_val will be set from data_in in ST_EXECUTE
+                            end
                         end
                         OPFAMILY_STORE: begin // STORE Rt_data, imm4(Rs_addr)
-                            mem_write <= 1'b1;
-                            addr_bus <= r[rs_addr_load_store] + {{12{1'b0}}, imm4_load_store};
+                            reg [15:0] potential_addr_bus_store; // Use specific name for clarity
+                            potential_addr_bus_store = r[rs_addr_load_store] + {{12{1'b0}}, imm4_load_store};
+                            addr_bus <= potential_addr_bus_store;
                             data_out <= r[rt_load_store];
                             needs_reg_writeback <= 1'b0; // Store does not write back to registers
+
+                            if (!((potential_addr_bus_store >= 16'h0000 && potential_addr_bus_store <= 16'h07FF) || 
+                                  (potential_addr_bus_store >= 16'h1000 && potential_addr_bus_store <= 16'h13FF))) begin
+                                bad_address_error <= 1'b1;
+                                mem_write <= 1'b0; // Do not assert mem_write
+                            end else begin
+                                mem_write <= 1'b1;
+                            end
                         end
                         OPFAMILY_LUI: begin // LUI Rt, imm8
                             needs_reg_writeback <= 1'b1;
@@ -248,15 +292,112 @@ module MCU  (
                         end
                         OPFAMILY_JCOND: begin // JCOND cond, imm8
                             perform_conditional_jump <= 1'b1;
+                            if (cond_jcond > 4'b1000) begin // Valid conditions are 0000 to 1000
+                                invalid_instruction_error <= 1'b1;
+                                perform_conditional_jump <= 1'b0; // Don't attempt jump for invalid condition
+                                needs_reg_writeback <= 1'b0; 
+                            end
                             // direct_jump_target and pc_override_en set in ST_EXECUTE
                         end
-                        default: begin /* Reserved OpFamily - NOP */ needs_reg_writeback <= 1'b0; end
+                        default: begin 
+                            /* Reserved OpFamily - NOP */ 
+                            is_alu_op <= 1'b0; 
+                            needs_reg_writeback <= 1'b0; 
+                            invalid_instruction_error <= 1'b1; 
+                        end
                     endcase
+
+                    // Exception check at the end of DECODE
+                    if (invalid_instruction_error || bad_address_error) begin
+                        exception_active <= 1'b1;
+                        captured_pc_for_exception <= r[REG_PC]; // Capture current PC
+                    end
+                    // Transition to EXECUTE; EXECUTE will check exception_active
                     state <= ST_EXECUTE;
                 end
                 ST_EXECUTE: begin
-                    if (is_alu_op) begin
-                        wb_val <= alu_out; // ALU result for writeback
+                    if (exception_active) begin
+                        // Exception Handling: Override normal execution
+                        needs_reg_writeback <= 1'b0;    // Suppress writeback for faulting instruction
+                        is_alu_op <= 1'b0;            // Suppress ALU flag updates
+                        mem_read <= 1'b0;             // Suppress memory read
+                        mem_write <= 1'b0;            // Suppress memory write
+                        perform_conditional_jump <= 1'b0; // Suppress conditional jump logic
+
+                        save_link_address <= 1'b1;    // Save faulting PC to LR
+                        link_address_content <= captured_pc_for_exception;
+                        
+                        direct_jump_target <= EXCEPTION_VECTOR; // Jump to handler
+                        pc_override_en <= 1'b1;
+                        new_pc <= EXCEPTION_VECTOR; // Ensure new_pc is set for ST_DONE
+
+                        state <= ST_WRITEBACK; // Go to WRITEBACK to save LR, then DONE to jump
+                    end else begin
+                        // Normal Execution Path
+                        if (is_alu_op) begin
+                            wb_val <= alu_out; // ALU result for writeback
+                        end
+                        if (mem_read && mem_ready) begin // LOAD
+                            wb_val <= data_in; // LOAD data for writeback
+                            mem_en <= 1'b0;
+                        end else if (mem_read && !mem_ready) { // LOAD - stall
+                            state <= ST_EXECUTE; // Re-evaluate in next cycle
+                            mem_en <= 1'b1;      // Keep mem_en asserted
+                            new_pc <= r[REG_PC]; // Hold PC
+                            pc_override_en <= 1'b1; // Force PC to hold
+                            direct_jump_target <= r[REG_PC]; // Force PC to hold
+                            needs_reg_writeback <= 1'b0; 
+                            perform_conditional_jump <= 1'b0; 
+                            is_alu_op <= 1'b0; 
+                        }
+                        
+                        if (mem_write && mem_ready) { // STORE
+                            mem_en <= 1'b0; 
+                        } else if (mem_write && !mem_ready) { // STORE - stall
+                            state <= ST_EXECUTE; 
+                            mem_en <= 1'b1;      
+                            write_en <= 1'b1;    
+                            new_pc <= r[REG_PC]; 
+                            pc_override_en <= 1'b1; 
+                            direct_jump_target <= r[REG_PC]; 
+                            needs_reg_writeback <= 1'b0; 
+                            perform_conditional_jump <= 1'b0; 
+                            is_alu_op <= 1'b0; 
+                        }
+
+                        if (perform_conditional_jump) begin
+                            case (cond_jcond)
+                                4'b0000: is_true_cond <= r[REG_FLG][1];  // JZ (Z=1)
+                                4'b0001: is_true_cond <= ~r[REG_FLG][1]; // JNZ (Z=0)
+                                4'b0010: is_true_cond <= r[REG_FLG][0];  // JC (C=1)
+                                4'b0011: is_true_cond <= ~r[REG_FLG][0]; // JNC (C=0)
+                                4'b0100: is_true_cond <= r[REG_FLG][2];  // JS (S=1)
+                                4'b0101: is_true_cond <= ~r[REG_FLG][2]; // JNS (S=0)
+                                4'b0110: is_true_cond <= r[REG_FLG][3];  // JO (O=1)
+                                4'b0111: is_true_cond <= ~r[REG_FLG][3]; // JNO (O=0)
+                                4'b1000: is_true_cond <= 1'b1;           // JMPA (Always)
+                                default: is_true_cond <= 1'b0;          // Reserved conditions
+                            endcase
+                            if (is_true_cond) begin
+                                direct_jump_target <= r[REG_PC] + {{8{imm8_jcond[7]}}, imm8_jcond}; // Sign-extend
+                                pc_override_en <= 1'b1;
+                            end else begin
+                                pc_override_en <= 1'b0; 
+                            end
+                        end
+                        
+                        if (!( (mem_read && !mem_ready) || (mem_write && !mem_ready) )) begin
+                            if (pc_override_en) begin
+                                new_pc <= direct_jump_target;
+                            end else begin
+                                new_pc <= r[REG_PC] + 1;
+                            end
+                            state <= ST_WRITEBACK;
+                        end
+                    end // End of normal execution vs exception handling
+                end
+                ST_WRITEBACK: begin
+                    if (needs_reg_writeback && wb_reg_idx != REG_PC && wb_reg_idx != REG_FLG) begin
                         // FLG update will happen in ST_WRITEBACK
                     end
                     if (mem_read && mem_ready) begin // LOAD
@@ -336,7 +477,10 @@ module MCU  (
                     state <= ST_DONE;
                 end
                 ST_DONE: begin
-                    r[REG_PC] <= new_pc;
+                    r[REG_PC] <= new_pc; // new_pc is EXCEPTION_VECTOR if exception_active was true in ST_EXECUTE
+                    if (exception_active) begin
+                        exception_active <= 1'b0; // Clear exception flag after PC is set for handler
+                    end
                     state <= ST_FETCH;
                 end
             endcase

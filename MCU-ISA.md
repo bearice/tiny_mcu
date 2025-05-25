@@ -189,3 +189,56 @@ This category includes Load Upper Immediate and various control flow instruction
 0000-07ff mcu_ram
 1000-13ff vram
 
+## 6. Exception Handling
+
+When an instruction encounters an error or an exceptional condition, the normal flow of execution is interrupted, and the MCU transitions to a predefined exception handling sequence.
+
+### 6.1. Exception Types
+
+The MCU can detect and respond to the following types of exceptions:
+
+*   **Invalid Instruction:** This exception is triggered if the MCU attempts to decode or execute an instruction that is not valid. Specific causes include:
+    *   Undefined `OpFamily` codes (`ir[15:12]`).
+    *   Reserved or undefined `OpSpecific` codes within a valid `OpFamily` (e.g., for ALU Register-Register operations).
+    *   Invalid `Cond[3:0]` codes used with the `JCOND` instruction (e.g., condition codes `1001` through `1111`).
+*   **Bad Address:** This exception is triggered if a `LOAD` or `STORE` operation attempts to access a memory address that is outside the defined valid memory regions. For this MCU, the valid regions are:
+    *   `mcu_ram`: `16'h0000` - `16'h07FF`
+    *   `vram`: `16'h1000` - `16'h13FF`
+    Any access outside these ranges by a `LOAD` or `STORE` instruction will result in a Bad Address exception.
+
+### 6.2. Exception Vector
+
+Upon detection of an exception:
+
+*   The Program Counter (PC, R15) is forcibly loaded with a fixed hardware exception vector address.
+*   **Exception Vector Address:** `16'h0002`
+
+Execution will resume from this address, where an exception handler routine is expected to be located.
+
+### 6.3. Context Saving
+
+To aid in exception handling and potential return:
+
+*   The address of the faulting instruction (the instruction that caused the exception) is automatically saved into the Link Register (LR, R13).
+*   This allows a simple return from the exception handler to the instruction following the faulting one (if the handler's purpose is to resume) by executing `JR LR`, provided the handler has preserved LR or the intent is to return to that specific point. Note that if the faulting instruction itself needs to be re-executed, the handler might need to adjust LR (e.g. `LR <= LR - 1`) before returning with `JR LR`. For non-recoverable errors, this saved PC can be used for logging or debugging.
+
+### 6.4. Instruction Suppression
+
+When an exception is triggered by an instruction:
+
+*   The faulting instruction does not complete its operation.
+*   Any intended register writes (other than the Link Register, R13, which is updated with the faulting PC) are suppressed.
+*   Any intended memory writes (in the case of a `STORE` causing a Bad Address exception) are suppressed.
+*   Any flag updates to the Flag Register (FLG, R12) that the faulting instruction would have performed are suppressed.
+
+This ensures that the MCU state (registers and memory) is not corrupted by the partial execution of a faulting instruction, beyond the defined context saving to LR and PC update.
+
+### 6.5. Error Signals (Internal MCU Behavior)
+
+Internally, the MCU core uses specific error signals to detect these conditions. For example:
+
+*   `invalid_instruction_error`: Set when an instruction's encoding is not recognized as valid.
+*   `bad_address_error`: Set when a memory access targets an invalid address.
+
+When one of these internal error signals is asserted during an instruction's processing, the MCU initiates the exception sequence described above (saving PC to LR, loading PC with `EXCEPTION_VECTOR`, suppressing the faulting instruction).
+
