@@ -1,13 +1,12 @@
-SDK_ROOT=C:\Gowin\Gowin_V1.9.8.05
+SDK_ROOT=C:\Gowin\Gowin_V1.9.11.02_x64
 GO_SH=${SDK_ROOT}/IDE/bin/gw_sh.exe
 PROG=${SDK_ROOT}/Programmer/bin/programmer_cli.exe
 MODGEN=${SDK_ROOT}/IDE/bin/GowinModGen.exe
-FIND="C:\ProgramData\chocolatey\bin\find.exe"
-PYTHON=python3
+PYTHON=python
 RM="C:\Program Files\Git\usr\bin\rm.exe"
 
 TCL_SCRIPT=tiny_mcu.tcl
-SOURCE=$(shell ${FIND} src -name "*.v")
+SOURCE=$(wildcard src/*.v)
 MODS=mods/font.v mods/vram.v mods/color_palette.v mods/rpll.v mods/mcu_ram.v
 MEM_INIT=resource/font.mi resource/vram.mi resource/palette.mi resource/mcu_ram.mi 
 CONSTRAINTS=src/tang_nano_9k.cst src/tiny_mcu.sdc
