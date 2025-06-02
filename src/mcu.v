@@ -234,6 +234,7 @@ module MCU  (
     wire [ID_EX_CTRL_WIDTH-1:0] id_stage_id_ex_ctrl_signals_data_comb;
     wire [15:0] id_stage_id_ex_branch_target_data_comb;
     wire [15:0] id_stage_id_ex_jr_target_data_comb;
+    wire [1:0] id_stage_id_ex_exception_code_data_comb; // Driven by ID stage
     wire id_ex_data_hazard_stall_needed_comb; // Driven by ID stage if hazard detected
 
     // EX Stage Combinational Outputs (wires to be driven by EX combinational block)
@@ -252,6 +253,7 @@ module MCU  (
     wire ex_stage_ex_mem_branch_taken_data_comb;
     wire [15:0] ex_stage_ex_mem_final_branch_target_data_comb;
     wire [3:0] ex_stage_ex_mem_alu_flags_data_comb;
+    wire [1:0] ex_stage_ex_mem_exception_code_data_comb; // Driven by EX stage
     // wire ex_mem_stage_valid_out; // Conceptual comment
     // wire [15:0] ex_mem_stage_pc_out; // Conceptual comment
     // wire [15:0] ex_mem_stage_ir_out; // Conceptual comment
@@ -268,6 +270,7 @@ module MCU  (
     wire [3:0] mem_stage_mem_wb_rd_idx_data_comb;
     wire [ID_EX_CTRL_WIDTH-1:0] mem_stage_mem_wb_ctrl_signals_data_comb;
     wire [3:0] mem_stage_mem_wb_alu_flags_data_comb;
+    wire [1:0] mem_stage_mem_wb_exception_code_data_comb; // Driven by MEM stage
 
     // Internal MEM Stage signals for memory control
     wire mem_stage_mem_en_comb_internal;      // Internal signal for memory enable
@@ -316,6 +319,7 @@ module MCU  (
             ID_EX_reg_ctrl_signals <= {ID_EX_CTRL_WIDTH{1'b0}}; // Initialize to benign (e.g., all zeros)
             ID_EX_reg_branch_target <= 16'b0;
             ID_EX_reg_jr_target <= 16'b0;
+            ID_EX_reg_exception_code <= 2'b00;
 
             EX_MEM_reg_valid <= 1'b0;
             EX_MEM_reg_pc <= 16'b0;
@@ -327,6 +331,7 @@ module MCU  (
             EX_MEM_reg_branch_taken <= 1'b0;
             EX_MEM_reg_final_branch_target <= 16'b0;
             EX_MEM_reg_alu_flags <= 4'b0;
+            EX_MEM_reg_exception_code <= 2'b00;
 
             MEM_WB_reg_valid <= 1'b0;
             MEM_WB_reg_pc <= 16'b0;
@@ -335,6 +340,7 @@ module MCU  (
             MEM_WB_reg_rd_idx <= 4'b0;
             MEM_WB_reg_ctrl_signals <= {ID_EX_CTRL_WIDTH{1'b0}}; // Use defined width
             MEM_WB_reg_alu_flags <= 4'b0;
+            MEM_WB_reg_exception_code <= 2'b00;
 
             // mem_en, write_en are now driven by assign statements.
             // pc_next_if <= 16'h0000; // Not used.
@@ -366,6 +372,7 @@ module MCU  (
             if (pipeline_flush_comb) begin
                 ID_EX_reg_valid <= 1'b0; // Flush
                 ID_EX_reg_ctrl_signals <= {ID_EX_CTRL_WIDTH{1'b0}}; // NOP control signals
+                ID_EX_reg_exception_code <= 2'b00; // Clear exception on flush
                 // Optional: clear other ID_EX fields
                 ID_EX_reg_pc <= 16'b0; ID_EX_reg_ir <= 16'b0; ID_EX_reg_op1_data <= 16'b0; ID_EX_reg_op2_data <= 16'b0;
                 ID_EX_reg_rd_idx <= 4'b0; ID_EX_reg_branch_target <= 16'b0; ID_EX_reg_jr_target <= 16'b0;
@@ -373,6 +380,7 @@ module MCU  (
                 if (id_ex_data_hazard_stall_needed_comb) begin // Data hazard specifically for current IF/ID data
                     ID_EX_reg_valid <= 1'b0; // Inject NOP
                     ID_EX_reg_ctrl_signals <= {ID_EX_CTRL_WIDTH{1'b0}}; // NOP control signals
+                    ID_EX_reg_exception_code <= 2'b00; // NOP has no exception
                     // Optional: clear other fields
                     ID_EX_reg_pc <= IF_ID_reg_pc; // Pass PC for debug, though invalid
                     ID_EX_reg_ir <= IF_ID_reg_ir; // Pass IR for debug
@@ -386,6 +394,7 @@ module MCU  (
                     ID_EX_reg_ctrl_signals  <= id_stage_id_ex_ctrl_signals_data_comb;
                     ID_EX_reg_branch_target <= id_stage_id_ex_branch_target_data_comb;
                     ID_EX_reg_jr_target     <= id_stage_id_ex_jr_target_data_comb;
+                    ID_EX_reg_exception_code <= id_stage_id_ex_exception_code_data_comb;
                 end
             end
             // else: ID_EX_reg holds if stall_frontend is active (and no flush)
@@ -407,6 +416,7 @@ module MCU  (
                     EX_MEM_reg_branch_taken  <= ex_stage_ex_mem_branch_taken_data_comb;
                     EX_MEM_reg_final_branch_target <= ex_stage_ex_mem_final_branch_target_data_comb;
                     EX_MEM_reg_alu_flags     <= ex_stage_ex_mem_alu_flags_data_comb;
+                    EX_MEM_reg_exception_code <= ex_stage_ex_mem_exception_code_data_comb;
                 end
 
                 // MEM/WB Stage Update (advances if not stalled globally)
@@ -418,6 +428,7 @@ module MCU  (
                     MEM_WB_reg_rd_idx       <= mem_stage_mem_wb_rd_idx_data_comb;
                     MEM_WB_reg_ctrl_signals <= mem_stage_mem_wb_ctrl_signals_data_comb;
                     MEM_WB_reg_alu_flags    <= mem_stage_mem_wb_alu_flags_data_comb;
+                    MEM_WB_reg_exception_code <= mem_stage_mem_wb_exception_code_data_comb;
                 end
             end
             // else: EX_MEM and MEM_WB registers hold due to stall_pipeline
@@ -475,6 +486,7 @@ module MCU  (
         id_stage_id_ex_rd_idx_data_comb = 4'b0;
         id_stage_id_ex_branch_target_data_comb = IF_ID_reg_pc; // Default, may not be used
         id_stage_id_ex_jr_target_data_comb = 16'b0;         // Default, may not be used
+        // id_stage_id_ex_exception_code_data_comb is initialized at start of block
 
         // Pass through PC and IR
         id_stage_id_ex_pc_data_comb = IF_ID_reg_pc;
@@ -535,8 +547,9 @@ module MCU  (
         end
 
         // Instruction decoding logic
+        id_stage_id_ex_exception_code_data_comb = 2'b00; // Initialize exception code
         if (IF_ID_reg_valid && !id_ex_data_hazard_stall_needed_comb) begin // Only decode if valid and no data hazard stall
-            id_stage_id_ex_valid_output_comb = 1'b1; // This instruction can proceed to ID/EX
+            id_stage_id_ex_valid_output_comb = 1'b1; // This instruction can proceed to ID/EX (unless its decode marks it invalid)
             // wire [3:0] rs1_idx_w = IF_ID_reg_ir[7:4]; // Now use current_id_rs1_idx
             // wire [3:0] rs2_idx_w = IF_ID_reg_ir[3:0]; // Now use current_id_rs2_idx
             wire [3:0] rd_idx_w;
@@ -568,9 +581,156 @@ module MCU  (
                         ALU_RR_SHL_SPEC: id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_SHL_4BIT;
                         ALU_RR_SHR_SPEC: id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_SHR_4BIT;
                         ALU_RR_MUL_SPEC: id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_MUL_4BIT;
-                        default: id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b0; // Invalid op, disable write
+                        default: begin
+                            id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; // Benign controls
+                            id_stage_id_ex_exception_code_data_comb[0] = 1'b1; // Set Invalid Instruction
+                        end
                     endcase
-                    id_stage_id_ex_op1_data_comb = r[rx_dst_s1_alu_rr_from_IF_ID]; // Rs1 is also the destination for many ALU RR
+                    // Only proceed with operand/rd assignment if no exception from op_specific
+                    if (id_stage_id_ex_exception_code_data_comb[0] == 1'b0) begin
+                        id_stage_id_ex_op1_data_comb = r[rx_dst_s1_alu_rr_from_IF_ID];
+                        id_stage_id_ex_op2_data_comb = r[ry_s2_alu_rr_from_IF_ID];
+                        if (op_specific_alu_rr_from_IF_ID == ALU_RR_SHL_SPEC || op_specific_alu_rr_from_IF_ID == ALU_RR_SHR_SPEC) begin
+                            id_stage_id_ex_op2_data_comb = {12'b0, r[ry_s2_alu_rr_from_IF_ID][3:0]};
+                        end
+                        id_stage_id_ex_rd_idx_data_comb = rx_dst_s1_alu_rr_from_IF_ID;
+                    end
+                end
+                OPFAMILY_ADDI: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUSrc_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsALU_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_ADD_4BIT;
+                    imm_processed_w = {{8{imm8_alu_ri_from_IF_ID[7]}}, imm8_alu_ri_from_IF_ID};
+                    id_stage_id_ex_op1_data_comb = r[rx_dst_s1_alu_ri_from_IF_ID];
+                    id_stage_id_ex_op2_data_comb = imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = rx_dst_s1_alu_ri_from_IF_ID;
+                end
+                OPFAMILY_ANDI: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUSrc_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsALU_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_AND_4BIT;
+                    imm_processed_w = {8'h00, imm8_alu_ri_from_IF_ID};
+                    id_stage_id_ex_op1_data_comb = r[rx_dst_s1_alu_ri_from_IF_ID];
+                    id_stage_id_ex_op2_data_comb = imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = rx_dst_s1_alu_ri_from_IF_ID;
+                end
+                OPFAMILY_ORI: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUSrc_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsALU_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_OR_4BIT;
+                    imm_processed_w = {8'h00, imm8_alu_ri_from_IF_ID};
+                    id_stage_id_ex_op1_data_comb = r[rx_dst_s1_alu_ri_from_IF_ID];
+                    id_stage_id_ex_op2_data_comb = imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = rx_dst_s1_alu_ri_from_IF_ID;
+                end
+                OPFAMILY_XORI: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUSrc_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsALU_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_XOR_4BIT;
+                    imm_processed_w = {8'h00, imm8_alu_ri_from_IF_ID};
+                    id_stage_id_ex_op1_data_comb = r[rx_dst_s1_alu_ri_from_IF_ID];
+                    id_stage_id_ex_op2_data_comb = imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = rx_dst_s1_alu_ri_from_IF_ID;
+                end
+                OPFAMILY_LOAD: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_MemRead_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_MemToReg_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUSrc_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_ADD_4BIT;
+                    imm_processed_w = {{12{imm4_load_store_from_IF_ID[3]}}, imm4_load_store_from_IF_ID};
+                    id_stage_id_ex_op1_data_comb = r[rs_addr_load_store_from_IF_ID];
+                    id_stage_id_ex_op2_data_comb = imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = rt_load_store_from_IF_ID;
+                end
+                OPFAMILY_STORE: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_MemWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUSrc_B] = 1'b0; // ALU uses r[Rs] and imm from IR (handled in EX)
+                                                                             // op2_data here is r[Rt] for forwarding
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_ADD_4BIT; // For address calculation in EX
+                    id_stage_id_ex_op1_data_comb = r[rs_addr_load_store_from_IF_ID]; // Base register r[Rs]
+                    id_stage_id_ex_op2_data_comb = r[rt_load_store_from_IF_ID];     // Data to store r[Rt]
+                    id_stage_id_ex_rd_idx_data_comb = rt_load_store_from_IF_ID; // Pass Rt index, EX uses it to get imm4 from IR
+                end
+                OPFAMILY_LUI: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_LUI_B] = 1'b1;
+                    imm_processed_w = {imm8_lui_from_IF_ID, 8'h00};
+                    id_stage_id_ex_op1_data_comb = 16'b0;
+                    id_stage_id_ex_op2_data_comb = imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = rt_lui_from_IF_ID;
+                end
+                OPFAMILY_JAL: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsJAL_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_BranchType_S +: CTRL_BRANCHTYPE_WIDTH] = 4'b0001;
+                    imm_processed_w = {{4{imm12_jal_from_IF_ID[11]}}, imm12_jal_from_IF_ID};
+                    id_stage_id_ex_branch_target_data_comb = IF_ID_reg_pc + imm_processed_w;
+                    id_stage_id_ex_rd_idx_data_comb = REG_LR;
+                    id_stage_id_ex_op1_data_comb = IF_ID_reg_pc;
+                    id_stage_id_ex_op2_data_comb = 16'd1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsALU_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_ALUOp_S +: CTRL_ALUOP_WIDTH] = OP_ADD_4BIT;
+                end
+                OPFAMILY_JR: begin
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_IsJR_B] = 1'b1;
+                    id_stage_id_ex_ctrl_signals_data_comb[CS_BranchType_S +: CTRL_BRANCHTYPE_WIDTH] = 4'b0010;
+                    id_stage_id_ex_jr_target_data_comb = r[rs_addr_jr_from_IF_ID];
+                end
+                OPFAMILY_JCOND: begin
+                    if (cond_jcond_from_IF_ID > 4'b1000 && cond_jcond_from_IF_ID != 4'b1111) begin // JMPA is 1000. Allow 1111 for future.
+                        id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}};
+                        id_stage_id_ex_exception_code_data_comb[0] = 1'b1;
+                    end else begin
+                        id_stage_id_ex_ctrl_signals_data_comb[CS_BranchType_S +: CTRL_BRANCHTYPE_WIDTH] = {cond_jcond_from_IF_ID};
+                        imm_processed_w = {{8{imm8_jcond_from_IF_ID[7]}}, imm8_jcond_from_IF_ID};
+                        id_stage_id_ex_branch_target_data_comb = IF_ID_reg_pc + imm_processed_w;
+                    end
+                end
+                OPFAMILY_ALU_RR_EXT: begin
+                    id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}};
+                    id_stage_id_ex_exception_code_data_comb[0] = 1'b1;
+                end
+                4'b0110: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; id_stage_id_ex_valid_output_comb = 1'b1; /*Propagate exception*/ end
+                4'b0111: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; id_stage_id_ex_valid_output_comb = 1'b1; end
+                4'b1010: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; id_stage_id_ex_valid_output_comb = 1'b1; end
+                4'b1011: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; id_stage_id_ex_valid_output_comb = 1'b1; end
+                default: begin
+                    if (op_family_from_IF_ID != OPFAMILY_ALU_RR && op_family_from_IF_ID != OPFAMILY_ADDI && /* ... (all valid families) ...*/
+                        op_family_from_IF_ID != OPFAMILY_JCOND && op_family_from_IF_ID != OPFAMILY_ALU_RR_EXT) begin // Check if truly unassigned
+                        id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}};
+                        id_stage_id_ex_exception_code_data_comb[0] = 1'b1;
+                    end
+                end
+            endcase
+            // If an exception was detected during decoding, ensure essential control signals are benign
+            if (id_stage_id_ex_exception_code_data_comb != 2'b00) begin
+                id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b0;
+                id_stage_id_ex_ctrl_signals_data_comb[CS_MemRead_B] = 1'b0;
+                id_stage_id_ex_ctrl_signals_data_comb[CS_MemWrite_B] = 1'b0;
+                id_stage_id_ex_ctrl_signals_data_comb[CS_IsJAL_B] = 1'b0; // Don't modify LR on exception path via JAL mechanism
+                id_stage_id_ex_ctrl_signals_data_comb[CS_IsJR_B] = 1'b0;
+                // BranchType might be left as is, but PC update logic will be overridden by exception vector.
+            end
+        end else begin // Either IF_ID_reg not valid OR data hazard stall detected
+            // If IF_ID_reg is not valid, or if there's a data hazard, output of ID stage is effectively a NOP (invalid)
+            id_stage_id_ex_valid_output_comb = 1'b0;
+            id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; // All control bits to 0 (NOP)
+            id_stage_id_ex_exception_code_data_comb = 2'b00; // No exception for a NOP caused by stall/invalid IF/ID
+            // Other data fields don't matter if valid is 0
+            id_stage_id_ex_op1_data_comb = 16'b0;
+            id_stage_id_ex_op2_data_comb = 16'b0;
+            id_stage_id_ex_rd_idx_data_comb = 4'b0;
+            id_stage_id_ex_branch_target_data_comb = IF_ID_reg_pc;
+            id_stage_id_ex_jr_target_data_comb = 16'b0;
+        end
+    end
+
+    // Connect ALU inputs to ID_EX outputs (conceptually, EX stage uses these)
                     id_stage_id_ex_op2_data_comb = r[ry_s2_alu_rr_from_IF_ID];
                     if (op_specific_alu_rr_from_IF_ID == ALU_RR_SHL_SPEC || op_specific_alu_rr_from_IF_ID == ALU_RR_SHR_SPEC) begin
                         id_stage_id_ex_op2_data_comb = {12'b0, r[ry_s2_alu_rr_from_IF_ID][3:0]}; // Use lower 4 bits of Ry for shift amount
@@ -714,25 +874,46 @@ module MCU  (
                 end
                 OPFAMILY_JCOND: begin // JCOND cond, imm8
                     // Branch decision happens in EX. ID prepares target and control signals.
-                    // Actual BranchType will also carry condition. For now, a generic JCOND type.
-                    id_stage_id_ex_ctrl_signals_data_comb[CS_BranchType_S +: CTRL_BRANCHTYPE_WIDTH] = {cond_jcond_from_IF_ID};
-                    imm_processed_w = {{8{imm8_jcond_from_IF_ID[7]}}, imm8_jcond_from_IF_ID}; // Sign-extend
-                    id_stage_id_ex_branch_target_data_comb = IF_ID_reg_pc + imm_processed_w;
+                    // Actual BranchType will also carry condition.
+                    if (cond_jcond_from_IF_ID > 4'b1000 && cond_jcond_from_IF_ID != 4'b1111) begin // JMPA is 1000. Allow 1111 for potential future use if any.
+                                                                                                   // For now, >1000 is invalid unless specific cases handled.
+                                                                                                   // The prompt implies > 4'b1000 is invalid.
+                        id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}};
+                        id_stage_id_ex_exception_code_data_comb[0] = 1'b1;
+                    end else begin
+                        id_stage_id_ex_ctrl_signals_data_comb[CS_BranchType_S +: CTRL_BRANCHTYPE_WIDTH] = {cond_jcond_from_IF_ID};
+                        imm_processed_w = {{8{imm8_jcond_from_IF_ID[7]}}, imm8_jcond_from_IF_ID}; // Sign-extend
+                        id_stage_id_ex_branch_target_data_comb = IF_ID_reg_pc + imm_processed_w;
+                    end
                 end
                 OPFAMILY_ALU_RR_EXT: begin // Reserved
-                    // Treat as NOP, disable writes
-                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b0;
+                    id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}};
+                    id_stage_id_ex_exception_code_data_comb[0] = 1'b1;
                 end
-                default: begin // All other reserved opfamilies
-                    // Treat as NOP / invalid instruction - disable writes
-                    id_stage_id_ex_ctrl_signals_data_comb[CS_RegWrite_B] = 1'b0;
-                    // Future: set an invalid instruction flag here.
+                // OpFamilies 0110, 0111 reserved for R-I ALU
+                4'b0110: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; end
+                4'b0111: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; end
+                // OpFamilies 1010, 1011 reserved for Mem Ops
+                4'b1010: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; end
+                4'b1011: begin id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; id_stage_id_ex_exception_code_data_comb[0] = 1'b1; end
+                default: begin // This default should ideally not be hit if all op_families are covered or explicitly reserved
+                    // However, if somehow reached, treat as invalid.
+                    if (op_family_from_IF_ID != OPFAMILY_ALU_RR && op_family_from_IF_ID != OPFAMILY_ADDI &&
+                        op_family_from_IF_ID != OPFAMILY_ANDI && op_family_from_IF_ID != OPFAMILY_ORI &&
+                        op_family_from_IF_ID != OPFAMILY_XORI && op_family_from_IF_ID != OPFAMILY_LOAD &&
+                        op_family_from_IF_ID != OPFAMILY_STORE && op_family_from_IF_ID != OPFAMILY_LUI &&
+                        op_family_from_IF_ID != OPFAMILY_JAL && op_family_from_IF_ID != OPFAMILY_JR &&
+                        op_family_from_IF_ID != OPFAMILY_JCOND && op_family_from_IF_ID != OPFAMILY_ALU_RR_EXT) begin
+                        id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}};
+                        id_stage_id_ex_exception_code_data_comb[0] = 1'b1;
+                    end
                 end
             endcase
         end else begin // Either IF_ID_reg not valid OR data hazard stall detected
             // If IF_ID_reg is not valid, or if there's a data hazard, output of ID stage is effectively a NOP (invalid)
             id_stage_id_ex_valid_output_comb = 1'b0;
             id_stage_id_ex_ctrl_signals_data_comb = {ID_EX_CTRL_WIDTH{1'b0}}; // All control bits to 0 (NOP)
+            id_stage_id_ex_exception_code_data_comb = 2'b00; // No exception for a NOP caused by stall/invalid IF/ID
             // Other data fields don't matter if valid is 0
             id_stage_id_ex_op1_data_comb = 16'b0;
             id_stage_id_ex_op2_data_comb = 16'b0;
@@ -760,6 +941,7 @@ module MCU  (
         ex_stage_ex_mem_ctrl_signals_data_comb = ID_EX_reg_ctrl_signals; // Pass through control signals
         ex_stage_ex_mem_op2_data_fwd_data_comb = ID_EX_reg_op2_data;   // Forward op2 (used for store data)
         ex_stage_ex_mem_alu_flags_data_comb = alu_flags_out;       // Capture ALU flags output
+        ex_stage_ex_mem_exception_code_data_comb = ID_EX_reg_exception_code; // Pass through exception code
 
         ex_stage_ex_mem_branch_taken_data_comb = 1'b0;             // Default to no branch/jump taken
         ex_stage_ex_mem_final_branch_target_data_comb = 16'bx;     // Default target (don't care)
@@ -919,6 +1101,7 @@ module MCU  (
         mem_stage_mem_wb_rd_idx_data_comb = EX_MEM_reg_rd_idx;
         mem_stage_mem_wb_ctrl_signals_data_comb = EX_MEM_reg_ctrl_signals; // Pass through
         mem_stage_mem_wb_alu_flags_data_comb = EX_MEM_reg_alu_flags;     // Pass through
+        mem_stage_mem_wb_exception_code_data_comb = EX_MEM_reg_exception_code; // Pass through existing exception code
 
         // Internal memory control signals - default to not accessing memory
         mem_stage_mem_en_comb_internal = 1'b0;
@@ -932,39 +1115,53 @@ module MCU  (
         // Default valid output
         mem_stage_mem_wb_valid_output_comb = EX_MEM_reg_valid; // Assume valid if EX_MEM was valid, unless stalled by mem_ready
 
+        wire mem_stage_bad_address_comb = 1'b0; // Local wire for bad address detection
+
         if (EX_MEM_reg_valid) begin
-            // LOAD operation
-            if (EX_MEM_reg_ctrl_signals[CS_MemRead_B]) begin
+            // Check for bad address if a memory operation is active
+            if (EX_MEM_reg_ctrl_signals[CS_MemRead_B] || EX_MEM_reg_ctrl_signals[CS_MemWrite_B]) begin
                 mem_stage_mem_en_comb_internal = 1'b1;
-                mem_stage_mem_write_comb_internal = 1'b0;
-                // addr_bus is already EX_MEM_reg_alu_out
-                if (mem_ready) begin
-                    mem_stage_mem_wb_wb_data_data_comb = data_in; // Data from memory
-                    mem_stage_mem_wb_valid_output_comb = 1'b1;    // Valid data is ready from memory
+                mem_stage_mem_write_comb_internal = EX_MEM_reg_ctrl_signals[CS_MemWrite_B];
+                // mem_stage_addr_bus_comb_internal is already EX_MEM_reg_alu_out
+
+                // Address validation (example ranges from original FSM)
+                // Valid RAM: 0x0000 - 0x07FF
+                // Valid I/O: 0x1000 - 0x13FF
+                if (!((mem_stage_addr_bus_comb_internal >= 16'h0000 && mem_stage_addr_bus_comb_internal <= 16'h07FF) ||
+                      (mem_stage_addr_bus_comb_internal >= 16'h1000 && mem_stage_addr_bus_comb_internal <= 16'h13FF))) begin
+                    mem_stage_bad_address_comb = 1'b1;
+                end
+
+                if (mem_stage_bad_address_comb) begin
+                    mem_stage_mem_wb_exception_code_data_comb = EX_MEM_reg_exception_code | 2'b10; // Set bad address bit, keep existing ones
+                    mem_stage_mem_wb_valid_output_comb = 1'b1; // Propagate exception, don't stall here for bad addr
+                    mem_stage_mem_en_comb_internal = 1'b0; // Suppress memory enable if bad address
+                    mem_stage_mem_write_comb_internal = 1'b0; // Suppress memory write if bad address
                 end else begin
-                    // MEM stage is active and needs memory, but memory is not ready
-                    mem_stage_mem_wb_valid_output_comb = 1'b0; // Output of MEM stage is not yet valid
+                    // LOAD operation
+                    if (EX_MEM_reg_ctrl_signals[CS_MemRead_B]) begin
+                        if (mem_ready) begin
+                            mem_stage_mem_wb_wb_data_data_comb = data_in; // Data from memory
+                            mem_stage_mem_wb_valid_output_comb = 1'b1;    // Valid data is ready
+                        end else {
+                            mem_stage_mem_wb_valid_output_comb = 1'b0; // Stall, waiting for memory
+                        }
+                    end
+                    // STORE operation
+                    else if (EX_MEM_reg_ctrl_signals[CS_MemWrite_B]) begin
+                        if (mem_ready) begin
+                            mem_stage_mem_wb_valid_output_comb = 1'b1; // Store op considered "done" for pipeline
+                        end else {
+                            mem_stage_mem_wb_valid_output_comb = 1'b0; // Stall, waiting for memory
+                        }
+                    end
                 end
             end
-            // STORE operation
-            else if (EX_MEM_reg_ctrl_signals[CS_MemWrite_B]) begin
-                mem_stage_mem_en_comb_internal = 1'b1;
-                mem_stage_mem_write_comb_internal = 1'b1;
-                // addr_bus is EX_MEM_reg_alu_out
-                // data_out is EX_MEM_reg_op2_data_fwd
-                if (mem_ready) begin
-                    mem_stage_mem_wb_valid_output_comb = 1'b1; // Store operation considered "complete" for pipeline progression
-                end else begin
-                    // MEM stage is active and needs memory, but memory is not ready
-                    mem_stage_mem_wb_valid_output_comb = 1'b0; // Output of MEM stage is not yet valid (store not completed)
-                end
-            end
-            // For ALU ops or others not accessing memory, wb_data is already EX_MEM_reg_alu_out
-            // and valid is EX_MEM_reg_valid.
-        end else begin
-            // If EX_MEM stage was not valid, then MEM_WB stage is not valid
+            // For non-memory ops, wb_data is EX_MEM_reg_alu_out, valid is EX_MEM_reg_valid.
+            // Exception code is passed through.
+        end else begin // If EX_MEM not valid
             mem_stage_mem_wb_valid_output_comb = 1'b0;
-            mem_stage_mem_en_comb_internal = 1'b0; // Ensure no memory access if invalid
+            mem_stage_mem_en_comb_internal = 1'b0;
             mem_stage_mem_write_comb_internal = 1'b0;
         end
     end
